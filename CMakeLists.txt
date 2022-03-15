@@ -250,3 +250,5 @@ add_subdirectory( plotjuggler_plugins/ToolboxQuaternion )
 add_subdirectory( plotjuggler_plugins/ToolboxFFT )
 
 add_subdirectory( plotjuggler_plugins/ParserProtobuf )
+
+add_subdirectory( plotjuggler_plugins/DataLoadAPBin )
