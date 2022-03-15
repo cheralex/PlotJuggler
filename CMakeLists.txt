@@ -9,8 +9,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}  "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 add_definitions(
     -DPJ_MAJOR_VERSION="3"
-    -DPJ_MINOR_VERSION="3"
-    -DPJ_PATCH_VERSION="5" )
+    -DPJ_MINOR_VERSION="4"
+    -DPJ_PATCH_VERSION="3" )
 
 # You can add some command line arguments at compilation time
 # Use _0x3b_ instead of semicolon
@@ -153,6 +153,7 @@ qt5_wrap_cpp(PLOTJUGGLER_BASE_MOCS
   plotjuggler_base/include/PlotJuggler/datastreamer_base.h
   plotjuggler_base/include/PlotJuggler/transform_function.h
   plotjuggler_base/include/PlotJuggler/plotwidget_base.h
+  plotjuggler_base/include/PlotJuggler/lua_highlighter.h
 )
 
 add_library( plotjuggler_base
@@ -165,6 +166,8 @@ add_library( plotjuggler_base
      plotjuggler_base/src/plotmagnifier.cpp
      plotjuggler_base/src/plotlegend.cpp
      plotjuggler_base/src/timeseries_qwt.cpp
+     plotjuggler_base/src/reactive_function.cpp
+     plotjuggler_base/src/lua_highlighter.cpp
      )
 # target_link_libraries(plotjuggler_base plotjuggler_qwt)
 
@@ -241,13 +244,14 @@ add_subdirectory( plotjuggler_plugins/DataStreamSample )
 add_subdirectory( plotjuggler_plugins/DataStreamWebsocket )
 add_subdirectory( plotjuggler_plugins/DataStreamUDP )
 add_subdirectory( plotjuggler_plugins/DataStreamMQTT )
-#add_subdirectory( plotjuggler_plugins/DataStreamZMQ )
+add_subdirectory( plotjuggler_plugins/DataStreamZMQ )
 
 add_subdirectory( plotjuggler_plugins/StatePublisherCSV )
 add_subdirectory( plotjuggler_plugins/VideoViewer )
 
 add_subdirectory( plotjuggler_plugins/ToolboxQuaternion )
 add_subdirectory( plotjuggler_plugins/ToolboxFFT )
+add_subdirectory( plotjuggler_plugins/ToolboxLuaEditor )
 
 add_subdirectory( plotjuggler_plugins/ParserProtobuf )
 

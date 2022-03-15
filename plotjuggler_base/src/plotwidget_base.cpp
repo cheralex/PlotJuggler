@@ -31,6 +31,7 @@
 #include <QDebug>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QHBoxLayout>
 
 static int _global_color_index_ = 0;
 
@@ -127,6 +128,7 @@ public:
   {
     QwtPlot::resizeEvent(ev);
     resized_callback(canvasBoundingRect());
+    emit parent->widgetResized();
   }
 
   std::list<CurveInfo> curve_list;
@@ -156,16 +158,6 @@ QwtPlot* PlotWidgetBase::qwtPlot()
 const QwtPlot* PlotWidgetBase::qwtPlot() const
 {
   return p;
-}
-
-QWidget* PlotWidgetBase::widget()
-{
-  return qwtPlot();
-}
-
-const QWidget* PlotWidgetBase::widget() const
-{
-  return qwtPlot();
 }
 
 void PlotWidgetBase::resetZoom()
@@ -236,7 +228,7 @@ Range PlotWidgetBase::getVisualizationRangeY(Range range_X) const
 
     auto series = dynamic_cast<QwtSeriesWrapper*>(it.curve->data());
 
-    const auto max_range_X = series->plotData()->rangeX();
+    auto max_range_X = series->getVisualizationRangeX();
     if (!max_range_X)
     {
       continue;
@@ -345,6 +337,11 @@ PlotWidgetBase::PlotWidgetBase(QWidget* parent)
 
   p = new QwtPlotPimpl(this, abs_canvas, onViewResized, onEvent);
 
+  auto layout = new QHBoxLayout(this);
+  layout->setMargin(0);
+  this->setLayout(layout);
+  layout->addWidget(p);
+
   qwtPlot()->setMinimumWidth(100);
   qwtPlot()->setMinimumHeight(100);
 
@@ -376,7 +373,8 @@ PlotWidgetBase::~PlotWidgetBase()
 }
 
 PlotWidgetBase::CurveInfo* PlotWidgetBase::addCurve(const std::string& name,
-                                                    PlotData& data, QColor color)
+                                                    PlotDataXY& data,
+                                                    QColor color)
 {
   const auto qname = QString::fromStdString(name);
 
@@ -390,7 +388,14 @@ PlotWidgetBase::CurveInfo* PlotWidgetBase::addCurve(const std::string& name,
   auto curve = new QwtPlotCurve(qname);
   try
   {
-    auto plot_qwt = createTimeSeries("", &data);
+    QwtSeriesWrapper* plot_qwt = nullptr;
+    if(auto ts_data = dynamic_cast<const PlotData*>(&data) )
+    {
+      plot_qwt = createTimeSeries(ts_data);
+    }
+    else{
+      plot_qwt = new QwtSeriesWrapper(&data);
+    }
 
     curve->setPaintAttribute(QwtPlotCurve::ClipPolygons, true);
     curve->setPaintAttribute(QwtPlotCurve::FilterPointsAggressive, true);
@@ -466,8 +471,7 @@ std::list<PlotWidgetBase::CurveInfo>& PlotWidgetBase::curveList()
   return p->curve_list;
 }
 
-QwtSeriesWrapper* PlotWidgetBase::createTimeSeries(const QString& transform_ID,
-                                                   const PlotData* data)
+QwtSeriesWrapper* PlotWidgetBase::createTimeSeries(const PlotData* data, const QString& transform_ID)
 {
   TransformedTimeseries* output = new TransformedTimeseries(data);
   output->setTransform(transform_ID);
@@ -596,14 +600,14 @@ bool PlotWidgetBase::eventFilter(QObject* obj, QEvent* event)
   return false;
 }
 
-QColor PlotWidgetBase::getColorHint(PlotData* data)
+QColor PlotWidgetBase::getColorHint(PlotDataXY* data)
 {
   QSettings settings;
   bool remember_color = settings.value("Preferences::remember_color", true).toBool();
 
   if (data)
   {
-    auto colorHint = data->attribute("ColorHint");
+    auto colorHint = data->attribute(COLOR_HINT);
     if (remember_color && colorHint.isValid())
     {
       return colorHint.value<QColor>();
@@ -650,7 +654,7 @@ QColor PlotWidgetBase::getColorHint(PlotData* data)
   }
   if (data)
   {
-    data->setAttribute("ColorHint", color);
+    data->setAttribute(COLOR_HINT, color);
   }
 
   return color;

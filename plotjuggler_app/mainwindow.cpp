@@ -40,9 +40,11 @@
 #include "transforms/function_editor.h"
 #include "transforms/lua_custom_function.h"
 #include "utils.h"
-#include "PlotJuggler/svg_util.h"
 #include "stylesheet.h"
 #include "dummy_data.h"
+#include "PlotJuggler/svg_util.h"
+#include "PlotJuggler/reactive_function.h"
+#include "multifile_prefix.h"
 
 #include "ui_aboutdialog.h"
 #include "ui_support_dialog.h"
@@ -151,10 +153,7 @@ MainWindow::MainWindow(const QCommandLineParser& commandline_parser, QWidget* pa
     _animated_streaming_movie->jumpToFrame(0);
   });
 
-  _tracker_delaty_timer = new QTimer();
-  _tracker_delaty_timer->setSingleShot(true);
-
-  connect(_tracker_delaty_timer, &QTimer::timeout, this, [this]() {
+  _tracker_delay.connectCallback([this]() {
     updatedDisplayTime();
     onUpdateLeftTableValues();
   });
@@ -457,15 +456,14 @@ void MainWindow::onTimeSlider_valueChanged(double abs_time)
 
 void MainWindow::onTrackerTimeUpdated(double absolute_time, bool do_replot)
 {
-  if (!_tracker_delaty_timer->isActive())
-  {
-    _tracker_delaty_timer->start(100);  // 10 Hz at most
-  }
+  _tracker_delay.triggerSignal(100);
 
   for (auto& it : _state_publisher)
   {
     it.second->updateState(absolute_time);
   }
+
+  updateReactivePlots();
 
   forEachWidget([&](PlotWidget* plot) {
     plot->setTrackerPosition(_tracker_time);
@@ -637,7 +635,7 @@ QStringList MainWindow::initializePlugins(QString directory_name)
       else if (toolbox)
       {
         plugin_name = toolbox->name();
-        plugin_type = "MessageParser";
+        plugin_type = "Toolbox";
       }
 
       QString message = QString("%1 is a %2 plugin").arg(filename).arg(plugin_type);
@@ -773,6 +771,8 @@ QStringList MainWindow::initializePlugins(QString directory_name)
       {
         toolbox->init(_mapped_plot_data, _transform_functions);
 
+        _toolboxes.insert(std::make_pair(plugin_name, toolbox));
+
         auto action = ui->menuTools->addAction(toolbox->name());
 
         int new_index = ui->widgetStack->count();
@@ -789,7 +789,12 @@ QStringList MainWindow::initializePlugins(QString directory_name)
                 [=]() { ui->widgetStack->setCurrentIndex(0); });
 
         connect(toolbox, &ToolboxPlugin::plotCreated, this,
-                [=](std::string name) { _curvelist_widget->addCurve(name); });
+                [=](std::string name) {
+                  _curvelist_widget->addCustom(QString::fromStdString(name));
+                  _curvelist_widget->updateAppearance();
+                  _curvelist_widget->clearSelections();
+                }
+                );
       }
     }
     else
@@ -982,8 +987,7 @@ void MainWindow::checkAllCurvesFromLayout(const QDomElement& root)
   std::set<std::string> curves;
 
   for (QDomElement tw = root.firstChildElement("tabbed_widget"); !tw.isNull();
-       tw = tw.nextSiblingElement("tabbed_"
-                                  "widget"))
+       tw = tw.nextSiblingElement("tabbed_widget"))
   {
     for (QDomElement pm = tw.firstChildElement("plotmatrix"); !pm.isNull();
          pm = pm.nextSiblingElement("plotmatrix"))
@@ -1113,35 +1117,34 @@ bool MainWindow::xmlLoadState(QDomDocument state_document)
 
 void MainWindow::onDeleteMultipleCurves(const std::vector<std::string>& curve_names)
 {
-  std::set<std::string> orphaned_transforms;
-
-  for (const auto& curve_name : curve_names)
+  std::set<std::string> to_be_deleted;
+  for(auto& name: curve_names)
   {
-    emit dataSourceRemoved(curve_name);
-    _curvelist_widget->removeCurve(curve_name);
-
-    _transform_functions.erase(curve_name);
-    for(auto it = _transform_functions.begin(); it != _transform_functions.end(); )
+    to_be_deleted.insert(name);
+  }
+  // add to the list of curves to delete the derived transforms
+  size_t prev_size = 0;
+  while( prev_size < to_be_deleted.size() )
+  {
+    prev_size = to_be_deleted.size();
+    for(auto& [trans_name, transform]: _transform_functions )
     {
-      bool removed = false;
-      for(const auto& source: it->second->dataSources() )
+      for(const auto& source: transform->dataSources() )
       {
-        if(source->plotName() == curve_name)
+        if( to_be_deleted.count(source->plotName()) > 0)
         {
-          it = _transform_functions.erase(it);
-          removed = true;
-          break;
+          to_be_deleted.insert(trans_name);
         }
-      }
-      if(!removed)
-      {
-        it++;
       }
     }
   }
-  for (const auto& curve_name : curve_names)
+
+  for (const auto& curve_name : to_be_deleted)
   {
+    emit dataSourceRemoved(curve_name);
+    _curvelist_widget->removeCurve(curve_name);
     _mapped_plot_data.erase(curve_name);
+    _transform_functions.erase(curve_name);
   }
   updateTimeOffset();
   forEachWidget([](PlotWidget* plot) { plot->replot(); });
@@ -1281,6 +1284,7 @@ void MainWindow::importPlotDataMap(PlotDataMapRef& new_data, bool remove_old)
       }
     };
 
+    ClearOldSeries(_mapped_plot_data.scatter_xy, new_data.scatter_xy);
     ClearOldSeries(_mapped_plot_data.numeric, new_data.numeric);
     ClearOldSeries(_mapped_plot_data.strings, new_data.strings);
   }
@@ -1306,22 +1310,18 @@ bool MainWindow::isStreamingActive() const
 
 bool MainWindow::loadDataFromFiles(QStringList filenames)
 {
-  static bool show_me = true;
-  if (filenames.size() > 1 && show_me)
+  filenames.sort();
+  std::map<QString, QString> filename_prefix;
+
+  if (filenames.size() > 1)
   {
-    QMessageBox msgbox;
-    msgbox.setWindowTitle("Loading multiple files");
-    msgbox.setText("You are loading multiple files at once. A prefix will be "
-                   "automatically added to the name of the "
-                   "timeseries.\n\n"
-                   "This is an experimental feature. Publishers will not work as you may "
-                   "expect.");
-    msgbox.addButton(QMessageBox::Ok);
-    QCheckBox* cb = new QCheckBox("Don't show this again");
-    cb->setChecked(!show_me);
-    msgbox.setCheckBox(cb);
-    connect(cb, &QCheckBox::stateChanged, this, [&]() { show_me = !cb->isChecked(); });
-    msgbox.exec();
+    DialogMultifilePrefix dialog(filenames, this);
+    int ret = dialog.exec();
+    if(ret != QDialog::Accepted)
+    {
+      return false;
+    }
+    filename_prefix = dialog.getPrefixes();
   }
 
   std::unordered_set<std::string> previous_names = _mapped_plot_data.getAllNames();
@@ -1332,9 +1332,9 @@ bool MainWindow::loadDataFromFiles(QStringList filenames)
   {
     FileLoadInfo info;
     info.filename = filenames[i];
-    if( ui->checkBoxLoadDataPrefix->isChecked() )
+    if( filename_prefix.count(info.filename) > 0 )
     {
-      info.prefix = QFileInfo(info.filename).baseName();
+      info.prefix = filename_prefix[info.filename];
     }
     auto added_names = loadDataFromFile(info);
     if (!added_names.empty())
@@ -1539,6 +1539,10 @@ std::unordered_set<std::string> MainWindow::loadDataFromFile(const FileLoadInfo&
 
 void MainWindow::on_buttonStreamingNotifications_clicked()
 {
+  if(_data_streamer.empty())
+  {
+    return;
+  }
   auto streamer = _data_streamer.at(ui->comboStreaming->currentText());
   QAction* notification_button_action = streamer->notificationAction().first;
   if (notification_button_action != nullptr)
@@ -1722,7 +1726,7 @@ void MainWindow::loadStyleSheet(QString file_path)
 
     forEachWidget([&](PlotWidget* plot) { plot->replot(); });
 
-    _curvelist_widget->updateColors();
+    _curvelist_widget->updateAppearance();
     emit stylesheetChanged(theme);
   }
   catch (std::runtime_error& err)
@@ -1737,6 +1741,41 @@ void MainWindow::updateDerivedSeries()
   {
 
   }
+}
+
+void MainWindow::updateReactivePlots()
+{
+  std::unordered_set<std::string> updated_curves;
+
+  bool curve_added = false;
+  for (auto& it : _transform_functions)
+  {
+    if( auto reactive_function = std::dynamic_pointer_cast<PJ::ReactiveLuaFunction>(it.second))
+    {
+      reactive_function->setTimeTracker(_tracker_time);
+      reactive_function->calculate();
+
+      for(auto& name: reactive_function->createdCurves())
+      {
+        curve_added |= _curvelist_widget->addCurve(name);
+        updated_curves.insert(name);
+      }
+    }
+  }
+  if(curve_added)
+  {
+    _curvelist_widget->refreshColumns();
+  }
+
+  forEachWidget([&](PlotWidget* plot) {
+    for(auto& curve: plot->curveList())
+    {
+      if( updated_curves.count(curve.src_name) != 0)
+      {
+        plot->zoomOut(false);
+      }
+    }
+  });
 }
 
 void MainWindow::on_stylesheetChanged(QString theme)
@@ -1797,6 +1836,10 @@ void MainWindow::loadPluginState(const QDomElement& root)
     {
       _data_streamer[plugin_name]->xmlLoadState(plugin_elem);
     }
+    if (_toolboxes.find(plugin_name) != _toolboxes.end())
+    {
+      _toolboxes[plugin_name]->xmlLoadState(plugin_elem);
+    }
     if (_state_publisher.find(plugin_name) != _state_publisher.end())
     {
       StatePublisherPtr publisher = _state_publisher[plugin_name];
@@ -1814,51 +1857,27 @@ QDomElement MainWindow::savePluginState(QDomDocument& doc)
 {
   QDomElement list_plugins = doc.createElement("Plugins");
 
-  auto CheckValidFormat = [this](const QString& expected_name, const QDomElement& elem) {
-    if (elem.nodeName() != "plugin" || elem.attribute("ID") != expected_name)
+  auto AddPlugins = [&](auto& plugins)
+  {
+    for (auto& [name, plugin] : plugins)
     {
-      QMessageBox::warning(this, tr("Error saving Plugin State to Layout"),
-                           tr("The method xmlSaveState() returned\n<plugin "
-                              "ID=\"%1\">\ninstead of\n<plugin ID=\"%2\">")
-                               .arg(elem.attribute("ID"))
-                               .arg(expected_name));
+      QDomElement elem = plugin->xmlSaveState(doc);
+      list_plugins.appendChild(elem);
     }
   };
 
-  for (auto& it : _data_loader)
-  {
-    const DataLoaderPtr dataloader = it.second;
-    QDomElement plugin_elem = dataloader->xmlSaveState(doc);
-    if (!plugin_elem.isNull())
-    {
-      list_plugins.appendChild(plugin_elem);
-      CheckValidFormat(it.first, plugin_elem);
-    }
-  }
-
-  for (auto& it : _data_streamer)
-  {
-    const DataStreamerPtr datastreamer = it.second;
-    QDomElement plugin_elem = datastreamer->xmlSaveState(doc);
-    if (!plugin_elem.isNull())
-    {
-      list_plugins.appendChild(plugin_elem);
-      CheckValidFormat(it.first, plugin_elem);
-    }
-  }
+  AddPlugins(_data_loader);
+  AddPlugins(_data_streamer);
+  AddPlugins(_toolboxes);
+  AddPlugins(_state_publisher);
 
   for (auto& it : _state_publisher)
   {
-    const StatePublisherPtr state_publisher = it.second;
+    const auto& state_publisher = it.second;
     QDomElement plugin_elem = state_publisher->xmlSaveState(doc);
-    if (!plugin_elem.isNull())
-    {
-      list_plugins.appendChild(plugin_elem);
-      CheckValidFormat(it.first, plugin_elem);
-    }
-
     plugin_elem.setAttribute("status", state_publisher->enabled() ? "active" : "idle");
   }
+
   return list_plugins;
 }
 
@@ -2259,9 +2278,16 @@ void MainWindow::updateDataAndReplot(bool replot_hidden_tabs)
               return a->order() < b->order();
             });
 
+  // Update the reactive plots
+  updateReactivePlots();
+
+  // update all transforms, but not the ReactiveLuaFunction
   for (auto& function : transforms)
   {
-    function->calculate();
+    if( dynamic_cast<ReactiveLuaFunction*>(function) == nullptr)
+    {
+      function->calculate();
+    }
   }
 
   forEachWidget([](PlotWidget* plot)
@@ -2533,6 +2559,11 @@ void MainWindow::closeEvent(QCloseEvent* event)
   settings.setValue("MainWindow.streamingBufferValue", ui->streamingSpinBox->value());
   settings.setValue("MainWindow.timeTrackerSetting", (int)_tracker_param);
   settings.setValue("MainWindow.splitterWidth", ui->mainSplitter->sizes()[0]);
+
+  _data_loader.clear();
+  _data_streamer.clear();
+  _state_publisher.clear();
+  _toolboxes.clear();
 }
 
 void MainWindow::onAddCustomPlot(const std::string& plot_name)
@@ -2614,59 +2645,61 @@ void MainWindow::onPlaybackLoop()
   });
 }
 
-void MainWindow::onCustomPlotCreated(CustomPlotPtr custom_plot)
+void MainWindow::onCustomPlotCreated(std::vector<CustomPlotPtr> custom_plots)
 {
-  const std::string& curve_name = custom_plot->aliasName().toStdString();
+  std::set<PlotWidget*> widget_to_replot;
 
-  // clear already existing data first
-  auto data_it = _mapped_plot_data.numeric.find(curve_name);
-  if (data_it != _mapped_plot_data.numeric.end())
+  for(auto custom_plot: custom_plots)
   {
-    data_it->second.clear();
+    const std::string& curve_name = custom_plot->aliasName().toStdString();
+    // clear already existing data first
+    auto data_it = _mapped_plot_data.numeric.find(curve_name);
+    if (data_it != _mapped_plot_data.numeric.end())
+    {
+      data_it->second.clear();
+    }
+    try
+    {
+      custom_plot->calculateAndAdd(_mapped_plot_data);
+    }
+    catch (std::exception& ex)
+    {
+      QMessageBox::warning(this, tr("Warning"),
+                           tr("Failed to create the custom timeseries. "
+                              "Error:\n\n%1")
+                               .arg(ex.what()));
+    }
+
+    // keep data for reference
+    auto custom_it = _transform_functions.find(curve_name);
+    if (custom_it == _transform_functions.end())
+    {
+      _transform_functions.insert({ curve_name, custom_plot });
+      _curvelist_widget->addCustom(QString::fromStdString(curve_name));
+    }
+    else
+    {
+      custom_it->second = custom_plot;
+    }
+
+    forEachWidget([&](PlotWidget* plot) {
+      if ( plot->curveFromTitle(QString::fromStdString(curve_name)) )
+      {
+        widget_to_replot.insert(plot);
+      }
+    });
   }
 
-  try
-  {
-    custom_plot->calculateAndAdd(_mapped_plot_data);
-  }
-  catch (std::exception& ex)
-  {
-    QMessageBox::warning(this, tr("Warning"),
-                         tr("Failed to create the custom timeseries. "
-                            "Error:\n\n%1")
-                             .arg(ex.what()));
-
-    return;
-  }
+  onUpdateLeftTableValues();
   ui->widgetStack->setCurrentIndex(0);
   _function_editor->clear();
-
-  // keep data for reference
-  auto custom_it = _transform_functions.find(curve_name);
-  if (custom_it == _transform_functions.end())
+  
+  for(auto plot: widget_to_replot)
   {
-    _transform_functions.insert({ curve_name, custom_plot });
-    _curvelist_widget->addCustom(QString::fromStdString(curve_name));
-    onUpdateLeftTableValues();
+    plot->updateCurves(true);
+    plot->replot();
   }
-  else
-  {
-    custom_it->second = custom_plot;
-  }
-
-  _function_editor->clear();
-
-  // update plots
-  forEachWidget([&](PlotWidget* plot) {
-    PlotWidgetBase::CurveInfo* info =
-        plot->curveFromTitle(QString::fromStdString(curve_name));
-
-    if (info)
-    {
-      plot->updateCurves(true);
-      plot->replot();
-    }
-  });
+  _curvelist_widget->clearSelections();
 }
 
 void MainWindow::on_actionReportBug_triggered()
@@ -3246,6 +3279,10 @@ void MainWindow::on_buttonRecentData_clicked()
 
 void MainWindow::on_buttonStreamingOptions_clicked()
 {
+  if(_data_streamer.empty())
+  {
+    return;
+  }
   auto streamer = _data_streamer.at(ui->comboStreaming->currentText());
 
   PopupMenu* menu = new PopupMenu(ui->buttonStreamingOptions, this);

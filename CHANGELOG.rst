@@ -2,6 +2,57 @@
 Changelog for package plotjuggler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.3 (2022-03-06)
+------------------
+* Apply changes to reactive Scripts
+* improve reactive Scripts
+* clear selections when CustomSeries is created
+* save batch function settings
+* cleaning up `#601 <https://github.com/facontidavide/PlotJuggler/issues/601>`_
+* Timestampfield (`#601 <https://github.com/facontidavide/PlotJuggler/issues/601>`_)
+* add new batch editor
+* check validity of the Lua function
+* consolidate tree view
+* add missing files and use CurveTree
+* multifile prefix
+* ReactiveLuaFunction cleanup
+* adding absolute transform
+* small UI fix
+* Contributors: Davide Faconti, ngpbach
+
+3.4.2 (2022-02-12)
+------------------
+* delete orhphaned transforms
+* bug fix that cause crash
+* fix error `#603 <https://github.com/facontidavide/PlotJuggler/issues/603>`_
+* Fix `#594 <https://github.com/facontidavide/PlotJuggler/issues/594>`_
+* Contributors: Davide Faconti
+
+3.4.1 (2022-02-06)
+------------------
+* add flip axis
+* fix zoom in icon
+* Fix typo in toolbox Lua (`#598 <https://github.com/facontidavide/PlotJuggler/issues/598>`_)
+* Fix MutableTimeseries shadowed by MutableScatterXY (`#597 <https://github.com/facontidavide/PlotJuggler/issues/597>`_)
+  * Fix MutableTimeseries shadowed by MutableScatterXY
+  * add math library
+  Co-authored-by: Simon CHANU <simon.chanu@cmdl.pro>
+* MQTT upgraded
+* Update README.md
+* Installer and readme updates
+* Contributors: Davide Faconti, SebasAlmagro, Simon CHANU
+
+3.4.0 (2022-01-29)
+------------------
+* fix `#585 <https://github.com/facontidavide/PlotJuggler/issues/585>`_
+* fix `#560 <https://github.com/facontidavide/PlotJuggler/issues/560>`_
+* fix `#575 <https://github.com/facontidavide/PlotJuggler/issues/575>`_
+* Reactive scripts (`#589 <https://github.com/facontidavide/PlotJuggler/issues/589>`_)
+* Fix Quaternion toolbox, issue `#587 <https://github.com/facontidavide/PlotJuggler/issues/587>`_
+* fix double delete
+* fix memory leaks `#582 <https://github.com/facontidavide/PlotJuggler/issues/582>`_
+* Contributors: Davide Faconti
+
 3.3.5 (2022-01-04)
 ------------------
 * fix zoom issue when toggling T_offset
