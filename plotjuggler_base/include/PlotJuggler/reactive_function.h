@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef REACTIVE_FUNCTION_H
 #define REACTIVE_FUNCTION_H
 
@@ -9,8 +15,8 @@ class CreatedSeriesBase;
 class CreatedSeriesTime;
 class CreatedSeriesXY;
 
-namespace PJ {
-
+namespace PJ
+{
 struct TimeseriesRef
 {
   TimeseriesRef(PlotData* data);
@@ -55,12 +61,10 @@ struct CreatedSeriesXY : public CreatedSeriesBase
 
 //-----------------------
 
-class ReactiveLuaFunction: public PJ::TransformFunction
+class ReactiveLuaFunction : public PJ::TransformFunction
 {
 public:
-  ReactiveLuaFunction(PlotDataMapRef* data_map,
-                      QString lua_global,
-                      QString lua_function,
+  ReactiveLuaFunction(PlotDataMapRef* data_map, QString lua_global, QString lua_function,
                       QString lua_library);
 
   const char* name() const override
@@ -104,7 +108,6 @@ public:
   }
 
 protected:
-
   void prepareLua();
 
   double _tracker_value = 0;
@@ -120,10 +123,11 @@ protected:
   sol::usertype<TimeseriesRef> _timeseries_ref;
   sol::usertype<CreatedSeriesTime> _created_timeseries;
   sol::usertype<CreatedSeriesXY> _created_scatter;
+
 private:
   void init();
 };
 
-}
+}  // namespace PJ
 
-#endif // REACTIVE_FUNCTION_H
+#endif  // REACTIVE_FUNCTION_H

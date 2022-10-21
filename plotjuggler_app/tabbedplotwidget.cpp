@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include <QMenu>
 #include <QSignalMapper>
 #include <QAction>
@@ -118,7 +124,7 @@ PlotDocker* TabbedPlotWidget::addTab(QString tab_name)
 {
   static int tab_suffix_count = 1;
 
-  // this must be done before ant PlotDocker is created
+  // this must be done before any PlotDocker is created
   ads::CDockManager::setConfigFlag(ads::CDockManager::DockAreaHasTabsMenuButton, false);
   ads::CDockManager::setConfigFlag(ads::CDockManager::DockAreaHasUndockButton, false);
   ads::CDockManager::setConfigFlag(ads::CDockManager::AlwaysShowTabs, true);
@@ -131,8 +137,7 @@ PlotDocker* TabbedPlotWidget::addTab(QString tab_name)
   }
 
   auto docker = new PlotDocker(tab_name, _mapped_data, this);
-  connect(docker, &PlotDocker::undoableChange,
-          this, &TabbedPlotWidget::undoableChange);
+  connect(docker, &PlotDocker::undoableChange, this, &TabbedPlotWidget::undoableChange);
 
   tabWidget()->addTab(docker, tab_name);
 

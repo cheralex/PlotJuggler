@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef TIMESERIES_QWT_H
 #define TIMESERIES_QWT_H
 
@@ -31,7 +37,8 @@ public:
   virtual RangeOpt getVisualizationRangeY(Range range_X);
 
   virtual void updateCache(bool reset_old_data)
-  {}
+  {
+  }
 };
 
 class QwtTimeseries : public QwtSeriesWrapper
@@ -53,7 +60,9 @@ public:
 
   virtual std::optional<QPointF> sampleFromTime(double t);
 
-  void updateCache(bool) override {}
+  void updateCache(bool) override
+  {
+  }
 
 protected:
   const PlotData* _ts_data;

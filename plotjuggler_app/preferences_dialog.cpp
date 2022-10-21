@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "preferences_dialog.h"
 #include "ui_preferences_dialog.h"
 #include <QSettings>
@@ -36,6 +42,15 @@ PreferencesDialog::PreferencesDialog(QWidget* parent)
 
   bool use_opengl = settings.value("Preferences::use_opengl", true).toBool();
   ui->checkBoxOpenGL->setChecked(use_opengl);
+
+  bool autozoom_visibility = settings.value("Preferences::autozoom_visibility",true).toBool();
+  ui->checkBoxAutoZoomVisibility->setChecked(autozoom_visibility);
+
+  bool autozoom_curve_added = settings.value("Preferences::autozoom_curve_added",true).toBool();
+  ui->checkBoxAutoZoomAdded->setChecked(autozoom_curve_added);
+
+  bool autozoom_filter_applied = settings.value("Preferences::autozoom_filter_applied",true).toBool();
+  ui->checkBoxAutoZoomFilter->setChecked(autozoom_filter_applied);
 
   //---------------
   auto custom_plugin_folders =
@@ -76,6 +91,9 @@ void PreferencesDialog::on_buttonBox_accepted()
                     ui->radioLocalColorIndex->isChecked());
   settings.setValue("Preferences::use_separator", ui->checkBoxSeparator->isChecked());
   settings.setValue("Preferences::use_opengl", ui->checkBoxOpenGL->isChecked());
+  settings.setValue("Preferences::autozoom_visibility", ui->checkBoxAutoZoomVisibility->isChecked());
+  settings.setValue("Preferences::autozoom_curve_added", ui->checkBoxAutoZoomAdded->isChecked());
+  settings.setValue("Preferences::autozoom_filter_applied", ui->checkBoxAutoZoomFilter->isChecked());
 
   QStringList plugin_folders;
   for (int row = 0; row < ui->listWidgetCustom->count(); row++)

@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "mainwindow.h"
 #include <iostream>
 #include <QApplication>
@@ -11,6 +17,7 @@
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QDir>
+#include <QUuid>
 
 #include "PlotJuggler/transform_function.h"
 #include "transforms/first_derivative.h"
@@ -23,6 +30,13 @@
 
 #include "nlohmann_parsers.h"
 #include "new_release_dialog.h"
+
+#ifdef COMPILED_WITH_CATKIN
+#include <ros/ros.h>
+#endif
+#ifdef COMPILED_WITH_AMENT
+#include <rclcpp/rclcpp.hpp>
+#endif
 
 static QString VERSION_STRING =
     QString("%1.%2.%3").arg(PJ_MAJOR_VERSION).arg(PJ_MINOR_VERSION).arg(PJ_PATCH_VERSION);
@@ -72,7 +86,7 @@ QPixmap getFunnySplashscreen()
   srand(time(nullptr));
 
   auto getNum = []() {
-    const int last_image_num = 71;
+    const int last_image_num = 89;
     int n = rand() % (last_image_num + 2);
     if (n > last_image_num)
     {
@@ -84,7 +98,7 @@ QPixmap getFunnySplashscreen()
   std::list<int> previous_nums;
 
   QStringList previous_list = settings.value("previousFunnyMemesList").toStringList();
-  for(auto str: previous_list)
+  for (auto str : previous_list)
   {
     int num = str.toInt();
     previous_set.insert(num);
@@ -97,16 +111,16 @@ QPixmap getFunnySplashscreen()
     n = getNum();
   }
 
-  while(previous_nums.size() >= 10)
+  while (previous_nums.size() >= 10)
   {
     previous_nums.pop_front();
   }
   previous_nums.push_back(n);
 
   QStringList new_list;
-  for(int num: previous_nums)
+  for (int num : previous_nums)
   {
-    new_list.push_back( QString::number(num) );
+    new_list.push_back(QString::number(num));
   }
 
   settings.setValue("previousFunnyMemesList", new_list);
@@ -114,50 +128,70 @@ QPixmap getFunnySplashscreen()
   return QPixmap(filename);
 }
 
-std::pair<int, char**> MergeArguments(int argc, char* argv[])
+std::vector<std::string> MergeArguments(const std::vector<std::string>& args)
 {
 #ifdef PJ_DEFAULT_ARGS
   auto default_cmdline_args =
       QString(PJ_DEFAULT_ARGS).split(" ", QString::SkipEmptyParts);
-  int new_argc = argc + default_cmdline_args.size();
-  static char* new_argv[100];
 
-  // preserve arg[0] => executable path
-  new_argv[0] = argv[0];
+  std::vector<std::string> new_args;
+  new_args.push_back(args.front());
 
   // Add the remain arguments, replacing escaped characters if necessary.
   // Escaping needed because some chars cannot be entered easily in the -DPJ_DEFAULT_ARGS
   // preprocessor directive
   //   _0x20_   -->   ' '   (space)
   //   _0x3b_   -->   ';'   (semicolon)
-  int index = 1;
   for (auto cmdline_arg : default_cmdline_args)
   {
     // replace(const QString &before, const QString &after, Qt::CaseSensitivity cs =
     // Qt::CaseSensitive)
     cmdline_arg = cmdline_arg.replace("_0x20_", " ", Qt::CaseSensitive);
     cmdline_arg = cmdline_arg.replace("_0x3b_", ";", Qt::CaseSensitive);
-    new_argv[index++] = strdup(cmdline_arg.toLocal8Bit().data());
+    new_args.push_back(strdup(cmdline_arg.toLocal8Bit().data()));
   }
 
   // If an argument appears repeated, the second value overrides previous one.
-  // Do this after adding default_cmdline_args so the command-line overide default
-  for (int i = 1; i < argc; ++i)
+  // Do this after adding default_cmdline_args so the command-line override default
+  for (size_t i = 1; i < args.size(); ++i)
   {
-    new_argv[index++] = argv[i];
+    new_args.push_back(args[i]);
   }
 
-  return { new_argc, new_argv };
+  return new_args;
 
 #else
-  return { argc, argv };
+  return args;
 #endif
 }
 
 int main(int argc, char* argv[])
 {
-  auto arg = MergeArguments(argc, argv);
-  QApplication app(arg.first, arg.second);
+  std::vector<std::string> args;
+
+#if !defined(COMPILED_WITH_CATKIN) && !defined(COMPILED_WITH_AMENT)
+  for (int i = 0; i < argc; i++)
+  {
+    args.push_back(argv[i]);
+  }
+#elif defined(COMPILED_WITH_CATKIN)
+  ros::removeROSArgs(argc, argv, args);
+#elif defined(COMPILED_WITH_AMENT)
+  args = rclcpp::remove_ros_arguments(argc, argv);
+#endif
+
+  args = MergeArguments(args);
+
+  int new_argc = args.size();
+  std::vector<char*> new_argv;
+  for (int i = 0; i < new_argc; i++)
+  {
+    new_argv.push_back(args[i].data());
+  }
+
+  QApplication app(new_argc, new_argv.data());
+
+  //-------------------------
 
   QCoreApplication::setOrganizationName("PlotJuggler");
   QCoreApplication::setApplicationName("PlotJuggler-3");
@@ -273,6 +307,11 @@ int main(int argc, char* argv[])
                                     "file_name (no extension)");
   parser.addOption(start_streamer);
 
+  QCommandLineOption window_title(QStringList() << "window_title",
+                                  "Set the window title",
+                                  "window_title");
+  parser.addOption(window_title);
+  
   parser.process(*qApp);
 
   if (parser.isSet(publish_option) && !parser.isSet(layout_option))
@@ -313,8 +352,11 @@ int main(int argc, char* argv[])
   QObject::connect(&manager, &QNetworkAccessManager::finished, OpenNewReleaseDialog);
 
   QNetworkRequest request;
-  request.setUrl(QUrl("https://api.github.com/repos/facontidavide/PlotJuggler/releases/"
-                      "latest"));
+
+  QString uuid = settings.value("UUID", QUuid::createUuid().toString()).toString();
+  settings.setValue("UUID", uuid);
+
+  request.setUrl(QUrl(QString("https://l4g9l4.deta.dev/check_updates/%1").arg(uuid)));
   manager.get(request);
 
   MainWindow* w = nullptr;

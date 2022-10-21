@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef PJ_DELAYED_CALLBACK_HPP
 #define PJ_DELAYED_CALLBACK_HPP
 
@@ -7,7 +13,6 @@
 
 namespace PJ
 {
-
 // Simple utility to avoid triggering a certain slot too often
 class DelayedCallback
 {
@@ -24,7 +29,7 @@ public:
   }
 
   template <class Function>
-  void connectCallback(Function callback )
+  void connectCallback(Function callback)
   {
     QObject::connect(_delay_timer, &QTimer::timeout, callback);
   }
@@ -41,6 +46,6 @@ private:
   QTimer* _delay_timer;
 };
 
-}
+}  // namespace PJ
 
-#endif // PJ_DELAYED_CALLBACK_HPP
+#endif  // PJ_DELAYED_CALLBACK_HPP

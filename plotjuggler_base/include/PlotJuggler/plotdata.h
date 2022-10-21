@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef PJ_PLOTDATA_H
 #define PJ_PLOTDATA_H
 
@@ -17,7 +23,7 @@ using PlotDataAny = TimeseriesBase<std::any>;
  */
 
 // obsolate. For back compatibility only
-//using PlotDataMap = std::unordered_map<std::string, PlotData>;
+// using PlotDataMap = std::unordered_map<std::string, PlotData>;
 
 using TimeseriesMap = std::unordered_map<std::string, PlotData>;
 using ScatterXYMap = std::unordered_map<std::string, PlotDataXY>;
@@ -53,7 +59,6 @@ struct PlotDataMapRef
 
   StringSeriesMap::iterator addStringSeries(const std::string& name,
                                             PlotGroup::Ptr group = {});
-
 
   PlotDataXY& getOrCreateScatterXY(const std::string& name, PlotGroup::Ptr group = {});
 

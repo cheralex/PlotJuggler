@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "nlohmann_parsers.h"
 
 #include "PlotJuggler/fmt/format.h"
@@ -8,7 +14,7 @@ bool NlohmannParser::parseMessageImpl(double& timestamp)
   {
     auto ts = _json.find(_stamp_fieldname);
     if (ts != _json.end() && ts.value().is_number())
-    { 
+    {
       timestamp = ts.value().get<double>();
     }
     else

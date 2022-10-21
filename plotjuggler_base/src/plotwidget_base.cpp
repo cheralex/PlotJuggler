@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "PlotJuggler/plotwidget_base.h"
 #include "timeseries_qwt.h"
 
@@ -14,7 +20,6 @@
 #include "qwt_plot_curve.h"
 #include "qwt_plot_opengl_canvas.h"
 #include "qwt_plot_rescaler.h"
-#include "qwt_plot_panner.h"
 #include "qwt_plot_legenditem.h"
 #include "qwt_plot_marker.h"
 #include "qwt_plot_layout.h"
@@ -33,6 +38,8 @@
 #include <QDropEvent>
 #include <QHBoxLayout>
 
+#include "plotpanner.h"
+
 static int _global_color_index_ = 0;
 
 class PlotWidgetBase::QwtPlotPimpl : public QwtPlot
@@ -40,8 +47,8 @@ class PlotWidgetBase::QwtPlotPimpl : public QwtPlot
 public:
   PlotLegend* legend;
   PlotMagnifier* magnifier;
-  QwtPlotPanner* panner1;
-  QwtPlotPanner* panner2;
+  PlotPanner* panner1;
+  PlotPanner* panner2;
   PlotZoomer* zoomer;
   std::function<void(const QRectF&)> resized_callback;
   std::function<void(QEvent*)> event_callback;
@@ -59,8 +66,8 @@ public:
 
     legend = new PlotLegend(this);
     magnifier = new PlotMagnifier(this->canvas());
-    panner1 = new QwtPlotPanner(this->canvas());
-    panner2 = new QwtPlotPanner(this->canvas());
+    panner1 = new PlotPanner(this->canvas());
+    panner2 = new PlotPanner(this->canvas());
     zoomer = new PlotZoomer(this->canvas());
 
     zoomer->setRubberBandPen(QColor(Qt::red, 1, Qt::DotLine));
@@ -81,18 +88,25 @@ public:
     panner2->setMouseButton(Qt::MiddleButton, Qt::NoModifier);
 
     connect(zoomer, &PlotZoomer::zoomed, this,
-            [this](const QRectF& r) { resized_callback(r); });
+            [this](const QRectF& r) {
+              resized_callback(r);
+            });
 
-    connect(magnifier, &PlotMagnifier::rescaled, this, [this](const QRectF& r) {
-      resized_callback(r);
-      replot();
+    connect(magnifier, &PlotMagnifier::rescaled, this,
+            [this](const QRectF& r) {
+        resized_callback(r);
+        replot();
     });
 
-    connect(panner1, &QwtPlotPanner::panned, this,
-            [this]() { resized_callback(canvasBoundingRect()); });
+    connect(panner1, &PlotPanner::rescaled, this,
+            [this](QRectF r) {
+              resized_callback(r);
+            });
 
-    connect(panner2, &QwtPlotPanner::panned, this,
-            [this]() { resized_callback(canvasBoundingRect()); });
+    connect(panner2, &PlotPanner::rescaled, this,
+            [this](QRectF r) {
+              resized_callback(r);
+            });
 
     QwtScaleWidget* bottomAxis = axisWidget(QwtPlot::xBottom);
     QwtScaleWidget* leftAxis = axisWidget(QwtPlot::yLeft);
@@ -140,6 +154,11 @@ public:
   void dragEnterEvent(QDragEnterEvent* event) override
   {
     event_callback(event);
+  }
+
+  void dragLeaveEvent(QDragLeaveEvent* event) override
+  {
+      event_callback(event);
   }
 
   void dropEvent(QDropEvent* event) override
@@ -279,7 +298,7 @@ bool PlotWidgetBase::isXYPlot() const
   return _xy_mode;
 }
 
-QRectF PlotWidgetBase::canvasBoundingRect() const
+QRectF PlotWidgetBase::currentBoundingRect() const
 {
   return p->canvasBoundingRect();
 }
@@ -297,12 +316,18 @@ void PlotWidgetBase::setModeXY(bool enable)
 PlotWidgetBase::PlotWidgetBase(QWidget* parent)
   : _xy_mode(false), _keep_aspect_ratio(false)
 {
-  auto onViewResized = [this](const QRectF& r) { emit viewResized(r); };
+  auto onViewResized = [this](const QRectF& r) {
+    emit viewResized(r);
+  };
 
   auto onEvent = [this](QEvent* event) {
     if (auto ev = dynamic_cast<QDragEnterEvent*>(event))
     {
       emit dragEnterSignal(ev);
+    }
+    else if(auto ev = dynamic_cast<QDragLeaveEvent*>(event))
+    {
+        emit dragLeaveSignal(ev);
     }
     else if (auto ev = dynamic_cast<QDropEvent*>(event))
     {
@@ -373,8 +398,7 @@ PlotWidgetBase::~PlotWidgetBase()
 }
 
 PlotWidgetBase::CurveInfo* PlotWidgetBase::addCurve(const std::string& name,
-                                                    PlotDataXY& data,
-                                                    QColor color)
+                                                    PlotDataXY& data, QColor color)
 {
   const auto qname = QString::fromStdString(name);
 
@@ -389,11 +413,12 @@ PlotWidgetBase::CurveInfo* PlotWidgetBase::addCurve(const std::string& name,
   try
   {
     QwtSeriesWrapper* plot_qwt = nullptr;
-    if(auto ts_data = dynamic_cast<const PlotData*>(&data) )
+    if (auto ts_data = dynamic_cast<const PlotData*>(&data))
     {
       plot_qwt = createTimeSeries(ts_data);
     }
-    else{
+    else
+    {
       plot_qwt = new QwtSeriesWrapper(&data);
     }
 
@@ -471,7 +496,8 @@ std::list<PlotWidgetBase::CurveInfo>& PlotWidgetBase::curveList()
   return p->curve_list;
 }
 
-QwtSeriesWrapper* PlotWidgetBase::createTimeSeries(const PlotData* data, const QString& transform_ID)
+QwtSeriesWrapper* PlotWidgetBase::createTimeSeries(const PlotData* data,
+                                                   const QString& transform_ID)
 {
   TransformedTimeseries* output = new TransformedTimeseries(data);
   output->setTransform(transform_ID);
@@ -583,11 +609,17 @@ bool PlotWidgetBase::eventFilter(QObject* obj, QEvent* event)
           {
             for (auto& it : curveList())
             {
+              QSettings settings;
+              bool autozoom_visibility = settings.value("Preferences::autozoom_visibility",true).toBool();
               if (clicked_item == it.curve)
               {
                 it.curve->setVisible(!it.curve->isVisible());
                 //_tracker->redraw();
-                resetZoom();
+
+                if(autozoom_visibility)
+                {
+                    resetZoom();
+                }
                 replot();
                 return true;
               }

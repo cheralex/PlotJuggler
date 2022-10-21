@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef PJ_PLOTDATA_BASE_H
 #define PJ_PLOTDATA_BASE_H
 
@@ -50,7 +56,7 @@ enum PlotAttribute
 
 using Attributes = std::unordered_map<PlotAttribute, QVariant>;
 
-inline bool CheckType(PlotAttribute attr, const QVariant& value )
+inline bool CheckType(PlotAttribute attr, const QVariant& value)
 {
   switch (attr)
   {
@@ -114,7 +120,6 @@ private:
 template <typename TypeX, typename Value>
 class PlotDataBase
 {
-
 public:
   class Point
   {
@@ -224,7 +229,7 @@ public:
   void setAttribute(PlotAttribute id, const QVariant& value)
   {
     _attributes[id] = value;
-    if(!CheckType(id, value))
+    if (!CheckType(id, value))
     {
       throw std::runtime_error("PlotDataBase::setAttribute : wrong type");
     }

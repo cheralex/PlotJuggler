@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
@@ -44,6 +50,9 @@
 
 #include "PlotJuggler/svg_util.h"
 #include "point_series_xy.h"
+#include "colormap_selector.h"
+
+#include "statistics_dialog.h"
 
 class TimeScaleDraw : public QwtScaleDraw
 {
@@ -86,12 +95,12 @@ PlotWidget::PlotWidget(PlotDataMapRef& datamap, QWidget* parent)
   connect(this, &PlotWidgetBase::viewResized, this, &PlotWidget::on_externallyResized);
 
   connect(this, &PlotWidgetBase::dragEnterSignal, this, &PlotWidget::onDragEnterEvent);
+  connect(this, &PlotWidgetBase::dragLeaveSignal, this, &PlotWidget::onDragLeaveEvent);
 
   connect(this, &PlotWidgetBase::dropSignal, this, &PlotWidget::onDropEvent);
 
-  connect(this, &PlotWidgetBase::widgetResized, this, [this]()
-  {
-    if( isXYPlot() && keepRatioXY())
+  connect(this, &PlotWidgetBase::widgetResized, this, [this]() {
+    if (isXYPlot() && keepRatioXY())
     {
       rescaleEqualAxisScaling();
     }
@@ -124,6 +133,7 @@ PlotWidget::~PlotWidget()
   delete _action_copy;
   delete _action_paste;
   delete _action_image_to_clipboard;
+  delete _action_data_statistics;
 }
 
 void PlotWidget::setContextMenuEnabled(bool enabled)
@@ -206,11 +216,15 @@ void PlotWidget::buildActions()
 
   _flip_x = new QAction("&Flip Horizontal Axis", this);
   _flip_x->setCheckable(true);
-  connect(_flip_x, &QAction::changed, this, &PlotWidget::onFlipAxis );
+  connect(_flip_x, &QAction::changed, this, &PlotWidget::onFlipAxis);
 
   _flip_y = new QAction("&Flip Vertical Axis", this);
   _flip_y->setCheckable(true);
-  connect(_flip_y, &QAction::changed, this, &PlotWidget::onFlipAxis );
+  connect(_flip_y, &QAction::changed, this, &PlotWidget::onFlipAxis);
+
+  _action_data_statistics = new QAction("&Show data statistics", this);
+  connect(_action_data_statistics, &QAction::triggered, this,
+          &PlotWidget::onShowDataStatistics);
 }
 
 void PlotWidget::canvasContextMenuTriggered(const QPoint& pos)
@@ -251,7 +265,7 @@ void PlotWidget::canvasContextMenuTriggered(const QPoint& pos)
   menu.addSeparator();
   menu.addAction(_action_removeAllCurves);
   menu.addSeparator();
-  if(isXYPlot())
+  if (isXYPlot())
   {
     menu.addAction(_flip_x);
   }
@@ -261,6 +275,7 @@ void PlotWidget::canvasContextMenuTriggered(const QPoint& pos)
   menu.addAction(_action_paste);
   menu.addAction(_action_image_to_clipboard);
   menu.addAction(_action_saveToFile);
+  menu.addAction(_action_data_statistics);
 
   // check the clipboard
   QClipboard* clipboard = QGuiApplication::clipboard();
@@ -278,8 +293,7 @@ void PlotWidget::canvasContextMenuTriggered(const QPoint& pos)
   menu.exec(qwtPlot()->canvas()->mapToGlobal(pos));
 }
 
-PlotWidget::CurveInfo* PlotWidget::addCurveXY(std::string name_x,
-                                              std::string name_y,
+PlotWidget::CurveInfo* PlotWidget::addCurveXY(std::string name_x, std::string name_y,
                                               QString curve_name)
 {
   std::string name = curve_name.toStdString();
@@ -392,14 +406,13 @@ PlotWidgetBase::CurveInfo* PlotWidget::addCurve(const std::string& name, QColor 
     info = PlotWidgetBase::addCurve(name, it2->second, color);
   }
 
-  if( info && info->curve )
+  if (info && info->curve)
   {
-    if( auto timeseries = dynamic_cast<QwtTimeseries*>( info->curve->data() ))
+    if (auto timeseries = dynamic_cast<QwtTimeseries*>(info->curve->data()))
     {
       timeseries->setTimeOffset(_time_offset);
     }
   }
-
   return info;
 }
 
@@ -437,6 +450,12 @@ void PlotWidget::onDataSourceRemoved(const std::string& src_name)
     _tracker->redraw();
     emit curveListChanged();
   }
+  if (_background_item &&
+      _background_item->dataName() == QString::fromStdString(src_name))
+  {
+    _background_item->detach();
+    _background_item.reset();
+  }
 }
 
 void PlotWidget::removeAllCurves()
@@ -470,15 +489,14 @@ void PlotWidget::onDragEnterEvent(QDragEnterEvent* event)
     {
       _dragging.curves.push_back(curve_name);
     }
-    if( _mapped_data.numeric.count(name) == 0 &&
-        _mapped_data.scatter_xy.count(name) == 0 )
+    if (_mapped_data.numeric.count(name) == 0 && _mapped_data.scatter_xy.count(name) == 0)
     {
       event->ignore();
       return;
     }
   }
 
-  if(_dragging.curves.empty())
+  if (_dragging.curves.empty())
   {
     event->ignore();
     return;
@@ -505,24 +523,32 @@ void PlotWidget::onDragEnterEvent(QDragEnterEvent* event)
   }
 }
 
+void PlotWidget::onDragLeaveEvent(QDragLeaveEvent* event){
+    _dragging.mode = DragInfo::NONE;
+    _dragging.curves.clear();
+}
+
 void PlotWidget::onDropEvent(QDropEvent*)
 {
   bool curves_changed = false;
+
+  bool noCurves = curveList().empty();
 
   if (_dragging.mode == DragInfo::CURVES)
   {
     size_t scatter_count = 0;
     for (const auto& curve_name : _dragging.curves)
     {
-      scatter_count += _mapped_data.scatter_xy.count( curve_name.toStdString() );
+      scatter_count += _mapped_data.scatter_xy.count(curve_name.toStdString());
     }
     bool scatter_curves = (scatter_count == _dragging.curves.size());
-    if( scatter_count > 0 && !scatter_curves )
+    if (scatter_count > 0 && !scatter_curves)
     {
       _dragging.mode = DragInfo::NONE;
       _dragging.curves.clear();
       QMessageBox::warning(qwtPlot(), "Warning",
-                           "You can not drag XY (scatter) data and timeseries into the same plot");
+                           "You can not drag XY (scatter) data and timeseries into the "
+                           "same plot");
       return;
     }
 
@@ -541,7 +567,6 @@ void PlotWidget::onDropEvent(QDropEvent*)
     }
     if (!isXYPlot() && scatter_curves)
     {
-
       QMessageBox::warning(qwtPlot(), "Warning",
                            tr("This is a [timeseries plot], you can not "
                               "drop XY scatter data here.\n"
@@ -549,7 +574,7 @@ void PlotWidget::onDropEvent(QDropEvent*)
                               "you must first remove all its curves."));
     }
 
-    if( isXYPlot() != scatter_curves )
+    if (isXYPlot() != scatter_curves)
     {
       _dragging.mode = DragInfo::NONE;
       _dragging.curves.clear();
@@ -586,7 +611,16 @@ void PlotWidget::onDropEvent(QDropEvent*)
   {
     emit curvesDropped();
     emit curveListChanged();
-    zoomOut(true);
+
+    QSettings settings;
+    bool autozoom_curve_added = settings.value("Preferences::autozoom_curve_added",true).toBool();
+    if(autozoom_curve_added || noCurves)
+    {
+        zoomOut(autozoom_curve_added);
+    }
+    else{
+        replot();
+    }
   }
   _dragging.mode = DragInfo::NONE;
   _dragging.curves.clear();
@@ -594,7 +628,7 @@ void PlotWidget::onDropEvent(QDropEvent*)
 
 void PlotWidget::on_panned(int, int)
 {
-  on_externallyResized(canvasBoundingRect());
+  on_externallyResized(currentBoundingRect());
 }
 
 QDomElement PlotWidget::xmlSaveState(QDomDocument& doc) const
@@ -602,7 +636,7 @@ QDomElement PlotWidget::xmlSaveState(QDomDocument& doc) const
   QDomElement plot_el = doc.createElement("plot");
 
   QDomElement range_el = doc.createElement("range");
-  QRectF rect = canvasBoundingRect();
+  QRectF rect = currentBoundingRect();
   range_el.setAttribute("bottom", QString::number(rect.bottom(), 'f', 6));
   range_el.setAttribute("top", QString::number(rect.top(), 'f', 6));
   range_el.setAttribute("left", QString::number(rect.left(), 'f', 6));
@@ -651,10 +685,8 @@ QDomElement PlotWidget::xmlSaveState(QDomDocument& doc) const
     {
       if (auto xy = dynamic_cast<PointSeriesXY*>(curve->data()))
       {
-        curve_el.setAttribute("curve_x",
-                              QString::fromStdString(xy->dataX()->plotName()));
-        curve_el.setAttribute("curve_y",
-                              QString::fromStdString(xy->dataY()->plotName()));
+        curve_el.setAttribute("curve_x", QString::fromStdString(xy->dataX()->plotName()));
+        curve_el.setAttribute("curve_y", QString::fromStdString(xy->dataY()->plotName()));
       }
     }
     else
@@ -676,10 +708,16 @@ QDomElement PlotWidget::xmlSaveState(QDomDocument& doc) const
   plot_el.setAttribute("flip_x", isXYPlot() && _flip_x->isChecked() ? "true" : "false");
   plot_el.setAttribute("flip_y", _flip_y->isChecked() ? "true" : "false");
 
+  if (_background_item)
+  {
+    plot_el.setAttribute("background_data", _background_item->dataName());
+    plot_el.setAttribute("background_colormap", _background_item->colormapName());
+  }
+
   return plot_el;
 }
 
-bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
+bool PlotWidget::xmlLoadState(QDomElement& plot_widget, bool autozoom)
 {
   std::set<std::string> added_curve_names;
 
@@ -721,8 +759,8 @@ bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
   for (QDomElement curve_element = plot_widget.firstChildElement("curve");
        !curve_element.isNull(); curve_element = curve_element.nextSiblingElement("curve"))
   {
-    bool is_merged_xy = curve_element.hasAttribute("curve_x") &&
-                        curve_element.hasAttribute("curve_y");
+    bool is_merged_xy =
+        curve_element.hasAttribute("curve_x") && curve_element.hasAttribute("curve_y");
     bool is_timeseries = !isXYPlot();
     bool is_scatter_xy = !is_timeseries && !is_merged_xy;
 
@@ -731,10 +769,10 @@ bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
     QColor color(curve_element.attribute("color"));
 
     //-----------------
-    if( is_timeseries || is_scatter_xy )
+    if (is_timeseries || is_scatter_xy)
     {
-      if ( (is_timeseries && _mapped_data.numeric.count(curve_name_std) == 0) ||
-           (!is_timeseries && _mapped_data.scatter_xy.count(curve_name_std) == 0) )
+      if ((is_timeseries && _mapped_data.numeric.count(curve_name_std) == 0) ||
+          (!is_timeseries && _mapped_data.scatter_xy.count(curve_name_std) == 0))
       {
         missing_curves.append(curve_name);
       }
@@ -763,7 +801,7 @@ bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
       }
     }
     //-----------------
-    if( is_merged_xy)
+    if (is_merged_xy)
     {
       std::string curve_x = curve_element.attribute("curve_x").toStdString();
       std::string curve_y = curve_element.attribute("curve_y").toStdString();
@@ -792,7 +830,7 @@ bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
     QMessageBox::warning(qwtPlot(), "Warning",
                          tr("Can't find one or more curves.\n"
                             "This message will be shown only once.\n%1")
-                            .arg(missing_curves.join(",\n")));
+                             .arg(missing_curves.join(",\n")));
     warning_message_shown = true;
   }
 
@@ -802,7 +840,7 @@ bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
 
   QDomElement rectangle = plot_widget.firstChildElement("range");
 
-  if (!rectangle.isNull())
+  if (!rectangle.isNull() && autozoom)
   {
     QRectF rect;
     rect.setBottom(rectangle.attribute("bottom").toDouble());
@@ -833,7 +871,44 @@ bool PlotWidget::xmlLoadState(QDomElement& plot_widget)
     }
   }
 
-  updateMaximumZoomArea();
+  QString bg_data = plot_widget.attribute("background_data");
+  QString bg_colormap = plot_widget.attribute("background_colormap");
+
+  if (!bg_data.isEmpty() && !bg_colormap.isEmpty())
+  {
+    auto plot_it = datamap().numeric.find(bg_data.toStdString());
+    if (plot_it == datamap().numeric.end())
+    {
+      QMessageBox::warning(qwtPlot(), "Warning",
+                           tr("Can't restore the background color.\n"
+                              "Series [%1] not found.")
+                               .arg(bg_data));
+    }
+    else
+    {
+      auto color_it = ColorMapLibrary().find(bg_colormap);
+      if (color_it == ColorMapLibrary().end())
+      {
+        QMessageBox::warning(qwtPlot(), "Warning",
+                             tr("Can't restore the background color.\n"
+                                "ColorMap [%1] not found.")
+                                 .arg(bg_colormap));
+      }
+      else
+      {
+        // everything fine.
+        _background_item =
+            std::make_unique<BackgroundColorItem>(plot_it->second, bg_colormap);
+        _background_item->setTimeOffset(&_time_offset);
+        _background_item->attach(qwtPlot());
+      }
+    }
+  }
+
+  if(autozoom)
+  {
+    updateMaximumZoomArea();
+  }
   replot();
   return true;
 }
@@ -848,13 +923,14 @@ void PlotWidget::rescaleEqualAxisScaling()
 
   QRectF rect = max_rect;
 
-  if( max_ratio < canvas_ratio )
+  if (max_ratio < canvas_ratio)
   {
-    double new_width = ( -max_rect.height() * canvas_ratio);
+    double new_width = (-max_rect.height() * canvas_ratio);
     rect.setWidth(new_width);
   }
-  else{
-    double new_height = ( -max_rect.width() / canvas_ratio);
+  else
+  {
+    double new_height = (-max_rect.width() / canvas_ratio);
     rect.setHeight(new_height);
   }
 
@@ -868,12 +944,6 @@ void PlotWidget::rescaleEqualAxisScaling()
 
 void PlotWidget::setZoomRectangle(QRectF rect, bool emit_signal)
 {
-  QRectF current_rect = canvasBoundingRect();
-  if (current_rect == rect)
-  {
-    return;
-  }
-
   if (isXYPlot() && keepRatioXY())
   {
     rescaleEqualAxisScaling();
@@ -896,6 +966,7 @@ void PlotWidget::setZoomRectangle(QRectF rect, bool emit_signal)
       emit rectChanged(this, rect);
     }
   }
+  updateStatistics();
 }
 
 void PlotWidget::reloadPlotData()
@@ -964,7 +1035,7 @@ void PlotWidget::setTrackerPosition(double abs_time)
   {
     for (auto& it : curveList())
     {
-      if( auto series = dynamic_cast<QwtTimeseries*>(it.curve->data()) )
+      if (auto series = dynamic_cast<QwtTimeseries*>(it.curve->data()))
       {
         auto pointXY = series->sampleFromTime(abs_time);
         if (pointXY)
@@ -990,14 +1061,14 @@ void PlotWidget::on_changeTimeOffset(double offset)
   {
     for (auto& it : curveList())
     {
-      if( auto series = dynamic_cast<QwtTimeseries*>(it.curve->data()) )
+      if (auto series = dynamic_cast<QwtTimeseries*>(it.curve->data()))
       {
         series->setTimeOffset(_time_offset);
       }
     }
     if (!isXYPlot() && !curveList().empty())
     {
-      QRectF rect = canvasBoundingRect();
+      QRectF rect = currentBoundingRect();
       double delta = prev_offset - offset;
       rect.moveLeft(rect.left() + delta);
       setZoomRectangle(rect, false);
@@ -1065,6 +1136,20 @@ void PlotWidget::updateCurves(bool reset_older_data)
     series->updateCache(reset_older_data);
   }
   updateMaximumZoomArea();
+
+  updateStatistics(true);
+}
+
+void PlotWidget::updateStatistics(bool forceUpdate)
+{
+  if (_statistics_dialog)
+  {
+    if (_statistics_dialog->calcVisibleRange() || forceUpdate)
+    {
+      auto rect = currentBoundingRect();
+      _statistics_dialog->update({ rect.left(), rect.right() });
+    }
+  }
 }
 
 void PlotWidget::on_changeCurveColor(const QString& curve_name, QColor new_color)
@@ -1086,32 +1171,121 @@ void PlotWidget::on_changeCurveColor(const QString& curve_name, QColor new_color
 
 void PlotWidget::onFlipAxis()
 {
-  if( isXYPlot() )
+  if (isXYPlot())
   {
     rescaleEqualAxisScaling();
   }
   else
   {
-      QRectF canvas_rect = qwtPlot()->canvas()->contentsRect();
-      const QwtScaleMap xMap = qwtPlot()->canvasMap(QwtPlot::xBottom);
-      const QwtScaleMap yMap = qwtPlot()->canvasMap(QwtPlot::yLeft);
-      canvas_rect = canvas_rect.normalized();
-      double x1 = xMap.invTransform(canvas_rect.left());
-      double x2 = xMap.invTransform(canvas_rect.right());
-      double y1 = yMap.invTransform(canvas_rect.bottom());
-      double y2 = yMap.invTransform(canvas_rect.top());
-      // flip will be done inside the function setAxisScale()
-      setAxisScale(QwtPlot::yLeft, y1, y2);
-      setAxisScale(QwtPlot::xBottom, x1, x2);
-      qwtPlot()->updateAxes();
-      replot();
+    QRectF canvas_rect = qwtPlot()->canvas()->contentsRect();
+    const QwtScaleMap xMap = qwtPlot()->canvasMap(QwtPlot::xBottom);
+    const QwtScaleMap yMap = qwtPlot()->canvasMap(QwtPlot::yLeft);
+    canvas_rect = canvas_rect.normalized();
+    double x1 = xMap.invTransform(canvas_rect.left());
+    double x2 = xMap.invTransform(canvas_rect.right());
+    double y1 = yMap.invTransform(canvas_rect.bottom());
+    double y2 = yMap.invTransform(canvas_rect.top());
+    // flip will be done inside the function setAxisScale()
+    setAxisScale(QwtPlot::yLeft, y1, y2);
+    setAxisScale(QwtPlot::xBottom, x1, x2);
+    qwtPlot()->updateAxes();
+    replot();
   }
   emit undoableChange();
 }
 
+void PlotWidget::onBackgroundColorRequest(QString name)
+{
+  QString prev_colormap;
+  if (name.isEmpty())
+  {
+    if (_background_item)
+    {
+      name = _background_item->dataName();
+      prev_colormap = _background_item->colormapName();
+    }
+    else
+    {
+      return;
+    }
+  }
+
+  auto plot_it = datamap().numeric.find(name.toStdString());
+  if (plot_it == datamap().numeric.end())
+  {
+    if (_background_item)
+    {
+      _background_item->detach();
+      _background_item.reset();
+      replot();
+    }
+    return;
+  }
+
+  ColormapSelectorDialog dialog(name, prev_colormap, this);
+  auto ret = dialog.exec();
+  if (ret == QDialog::Accepted)
+  {
+    if (_background_item)
+    {
+      _background_item->detach();
+      _background_item.reset();
+    }
+
+    QString colormap = dialog.selectedColorMap();
+    if (!colormap.isEmpty() && ColorMapLibrary().count(colormap) != 0)
+    {
+      _background_item = std::make_unique<BackgroundColorItem>(plot_it->second, colormap);
+      _background_item->setTimeOffset(&_time_offset);
+      _background_item->attach(qwtPlot());
+    }
+    replot();
+  }
+}
+
+void PlotWidget::setStatisticsTitle(QString title)
+{
+  _statistics_window_title = title;
+
+  if (_statistics_dialog)
+  {
+    _statistics_dialog->setTitle(_statistics_window_title);
+  }
+}
+
+void PlotWidget::onShowDataStatistics()
+{
+  if (!_statistics_dialog)
+  {
+    _statistics_dialog = new StatisticsDialog(this);
+  }
+
+  setStatisticsTitle(_statistics_window_title);
+
+  auto rect = currentBoundingRect();
+  _statistics_dialog->update({ rect.left(), rect.right() });
+  _statistics_dialog->show();
+  _statistics_dialog->raise();
+  _statistics_dialog->activateWindow();
+
+  _statistics_dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+  auto setToNull = [this]() { _statistics_dialog = nullptr; };
+
+  connect(this, &PlotWidget::rectChanged, _statistics_dialog,
+          [this](PlotWidget*, QRectF rect) {
+            _statistics_dialog->update({ rect.left(), rect.right() });
+          });
+
+  connect(_statistics_dialog, &QDialog::rejected, this, setToNull);
+
+  connect(this, &PlotWidgetBase::curveListChanged, this,
+          [this]() { updateStatistics(); });
+}
+
 void PlotWidget::on_externallyResized(const QRectF& rect)
 {
-  QRectF current_rect = canvasBoundingRect();
+  QRectF current_rect = currentBoundingRect();
   if (current_rect == rect)
   {
     return;
@@ -1132,6 +1306,7 @@ void PlotWidget::zoomOut(bool emit_signal)
     return;
   }
   updateMaximumZoomArea();
+
   setZoomRectangle(maxZoomRect(), emit_signal);
   replot();
 }
@@ -1139,18 +1314,18 @@ void PlotWidget::zoomOut(bool emit_signal)
 void PlotWidget::on_zoomOutHorizontal_triggered(bool emit_signal)
 {
   updateMaximumZoomArea();
-  QRectF act = canvasBoundingRect();
+  QRectF act = currentBoundingRect();
   auto rangeX = getVisualizationRangeX();
 
   act.setLeft(rangeX.min);
   act.setRight(rangeX.max);
-  this->setZoomRectangle(act, emit_signal);
+  setZoomRectangle(act, emit_signal);
 }
 
 void PlotWidget::on_zoomOutVertical_triggered(bool emit_signal)
 {
   updateMaximumZoomArea();
-  QRectF rect = canvasBoundingRect();
+  QRectF rect = currentBoundingRect();
   auto rangeY = getVisualizationRangeY({ rect.left(), rect.right() });
 
   rect.setBottom(rangeY.min);
@@ -1347,7 +1522,6 @@ void PlotWidget::on_pasteAction_triggered()
   {
     auto el = root.firstChildElement();
     xmlLoadState(el);
-    clipboard->setText("");
     emit undoableChange();
   }
 }
@@ -1381,33 +1555,34 @@ void PlotWidget::overrideCursonMove()
 
 void PlotWidget::setAxisScale(QwtAxisId axisId, double min, double max)
 {
-  if( min > max )
+  if (min > max)
   {
     std::swap(min, max);
   }
-  if( axisId == QwtPlot::xBottom && _flip_x->isChecked() )
+  if (axisId == QwtPlot::xBottom && _flip_x->isChecked())
   {
     qwtPlot()->setAxisScale(QwtPlot::xBottom, max, min);
   }
-  else if( axisId == QwtPlot::yLeft && _flip_y->isChecked() )
+  else if (axisId == QwtPlot::yLeft && _flip_y->isChecked())
   {
     qwtPlot()->setAxisScale(QwtPlot::yLeft, max, min);
   }
-  else {
+  else
+  {
     qwtPlot()->setAxisScale(axisId, min, max);
   }
 }
 
 bool PlotWidget::isZoomLinkEnabled() const
 {
-//  for (const auto& it : curveList())
-//  {
-//    auto series = dynamic_cast<QwtSeriesWrapper*>(it.curve->data());
-//    if (series->plotData()->attribute(PJ::DISABLE_LINKED_ZOOM).toBool())
-//    {
-//      return false;
-//    }
-//  }
+  //  for (const auto& it : curveList())
+  //  {
+  //    auto series = dynamic_cast<QwtSeriesWrapper*>(it.curve->data());
+  //    if (series->plotData()->attribute(PJ::DISABLE_LINKED_ZOOM).toBool())
+  //    {
+  //      return false;
+  //    }
+  //  }
   return true;
 }
 
@@ -1418,7 +1593,7 @@ bool PlotWidget::canvasEventFilter(QEvent* event)
     case QEvent::MouseButtonPress: {
       if (_dragging.mode != DragInfo::NONE)
       {
-        return true;  // don't pass to canvas().
+          return true;  // don't pass to canvas().
       }
 
       QMouseEvent* mouse_event = static_cast<QMouseEvent*>(event);
@@ -1556,13 +1731,4 @@ QwtSeriesWrapper* PlotWidget::createTimeSeries(const PlotData* data,
   output->setTimeOffset(_time_offset);
   output->updateCache(true);
   return output;
-}
-
-void PlotWidget::changeBackgroundColor(QColor color)
-{
-  if (qwtPlot()->canvasBackground().color() != color)
-  {
-    qwtPlot()->setCanvasBackground(color);
-    replot();
-  }
 }

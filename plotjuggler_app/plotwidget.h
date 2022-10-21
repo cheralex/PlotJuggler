@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef DragableWidget_H
 #define DragableWidget_H
 
@@ -20,9 +26,14 @@
 
 #include "PlotJuggler/plotwidget_base.h"
 #include "customtracker.h"
+#include "colormap_editor.h"
 
 #include "transforms/transform_selector.h"
 #include "transforms/custom_function.h"
+
+#include "plot_background.h"
+
+class StatisticsDialog;
 
 class PlotWidget : public PlotWidgetBase
 {
@@ -37,15 +48,13 @@ public:
 
   QDomElement xmlSaveState(QDomDocument& doc) const;
 
-  bool xmlLoadState(QDomElement& element);
+  bool xmlLoadState(QDomElement& element, bool autozoom = true);
 
   Range getVisualizationRangeY(Range range_X) const override;
 
   void setZoomRectangle(QRectF rect, bool emit_signal);
 
   void reloadPlotData();
-
-  void changeBackgroundColor(QColor color);
 
   double timeOffset() const
   {
@@ -69,11 +78,16 @@ public:
 
   bool isZoomLinkEnabled() const;
 
+  void setStatisticsTitle(QString title);
+
+  void updateStatistics(bool forceUpdate = false);
+
 protected:
   PlotDataMapRef& _mapped_data;
 
   bool eventFilter(QObject* obj, QEvent* event) override;
   void onDragEnterEvent(QDragEnterEvent* event);
+  void onDragLeaveEvent(QDragLeaveEvent* event);
   void onDropEvent(QDropEvent* event);
 
   bool canvasEventFilter(QEvent* event);
@@ -124,6 +138,10 @@ public slots:
 
   void onFlipAxis();
 
+  void onBackgroundColorRequest(QString name);
+
+  void onShowDataStatistics();
+
 private slots:
 
   // void on_changeToBuiltinTransforms(QString new_transform);
@@ -150,6 +168,7 @@ private:
   QAction* _action_formula;
   QAction* _action_split_horizontal;
   QAction* _action_split_vertical;
+  QAction* _action_data_statistics;
 
   QAction* _action_zoomOutMaximum;
   QAction* _action_zoomOutHorizontally;
@@ -165,7 +184,13 @@ private:
   CurveTracker* _tracker;
   QwtPlotGrid* _grid;
 
+  QString _statistics_window_title = "";
+
+  std::unique_ptr<BackgroundColorItem> _background_item;
+
   bool _use_date_time_scale;
+
+  StatisticsDialog* _statistics_dialog = nullptr;
 
   struct DragInfo
   {
@@ -207,7 +232,6 @@ private:
   void overrideCursonMove();
 
   void setAxisScale(QwtAxisId axisId, double min, double max);
-
 };
 
 #endif

@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "timeseries_qwt.h"
 #include <limits>
 #include <stdexcept>
@@ -5,12 +11,11 @@
 #include <QPushButton>
 #include <QString>
 
-
 RangeOpt QwtSeriesWrapper::getVisualizationRangeY(Range range_x)
 {
-  if(range_x.min <= std::numeric_limits<double>::lowest() &&
-     range_x.min <= std::numeric_limits<double>::max())
-  return _data->rangeY();
+  if (range_x.min <= std::numeric_limits<double>::lowest() &&
+      range_x.min <= std::numeric_limits<double>::max())
+    return _data->rangeY();
 
   double min_y = (std::numeric_limits<double>::max());
   double max_y = (std::numeric_limits<double>::lowest());
@@ -22,7 +27,6 @@ RangeOpt QwtSeriesWrapper::getVisualizationRangeY(Range range_x)
     max_y = std::max(max_y, Y);
   }
   return Range{ min_y, max_y };
-
 }
 
 RangeOpt QwtTimeseries::getVisualizationRangeY(Range range_X)

@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef DATALOAD_TEMPLATE_H
 #define DATALOAD_TEMPLATE_H
 
@@ -40,6 +46,19 @@ public:
 
   virtual bool readDataFromFile(FileLoadInfo* fileload_info,
                                 PlotDataMapRef& destination) = 0;
+
+  void setParserFactories(ParserFactories *parsers)
+  {
+    _parser_factories = parsers;
+  }
+
+  const ParserFactories* parserFactories() const
+  {
+    return _parser_factories;
+  }
+
+private:
+  ParserFactories* _parser_factories = nullptr;
 };
 
 using DataLoaderPtr = std::shared_ptr<DataLoader>;

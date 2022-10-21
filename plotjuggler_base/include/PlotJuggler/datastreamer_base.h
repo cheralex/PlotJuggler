@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef DATA_STREAMER_TEMPLATE_H
 #define DATA_STREAMER_TEMPLATE_H
 
@@ -70,15 +76,9 @@ public:
     return _data_map;
   }
 
-  /**
-   * @brief setAvailableParsers is invoked by the main application to share
-   * the MessageParserFactory instance.
-   *
-   * @param parsers
-   */
-  void setAvailableParsers(std::shared_ptr<MessageParserFactory> parsers_factory);
+  void setParserFactories( ParserFactories* parsers);
 
-  std::shared_ptr<MessageParserFactory> availableParsers();
+  const ParserFactories* parserFactories() const;
 
 signals:
 
@@ -101,10 +101,11 @@ signals:
   void notificationsChanged(int active_notification_count);
 
 private:
+
   std::mutex _mutex;
   PlotDataMapRef _data_map;
   QAction* _start_streamer;
-  std::shared_ptr<MessageParserFactory> _available_parsers;
+  ParserFactories* _parser_factories = nullptr;
 };
 
 using DataStreamerPtr = std::shared_ptr<DataStreamer>;

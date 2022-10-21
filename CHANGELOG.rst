@@ -2,6 +2,111 @@
 Changelog for package plotjuggler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.0 (2022-08-13)
+------------------
+* More memes
+* Refactoring of the MessageParser plugins 
+* Mcap support (`#722 <https://github.com/facontidavide/PlotJuggler/issues/722>`_)
+* Improve CSV loader error handling (`#721 <https://github.com/facontidavide/PlotJuggler/issues/721>`_)
+* Fix plotwidget drag and drop bug (Issue `#716 <https://github.com/facontidavide/PlotJuggler/issues/716>`_) (`#717 <https://github.com/facontidavide/PlotJuggler/issues/717>`_)
+* fix(snap): remove yaml grade (`#718 <https://github.com/facontidavide/PlotJuggler/issues/718>`_)
+  grade is set from the part
+  YAML grade has priority over the programmed one so we remove it
+* Contributors: Bartimaeus-, Davide Faconti, Guillaume Beuzeboc
+
+3.5.2 (2022-08-05)
+------------------
+* fix issue `#642 <https://github.com/facontidavide/PlotJuggler/issues/642>`_
+* fix FFT toolbox
+* Add options for enabling/disabling autozoom in preferences (`#704 <https://github.com/facontidavide/PlotJuggler/issues/704>`_)
+* add support for custom window titles (`#715 <https://github.com/facontidavide/PlotJuggler/issues/715>`_)
+* Fix/snap rosbag (`#714 <https://github.com/facontidavide/PlotJuggler/issues/714>`_)
+* fix mosquitto build in linux
+* Better cmake (`#710 <https://github.com/facontidavide/PlotJuggler/issues/710>`_)
+* fix `#707 <https://github.com/facontidavide/PlotJuggler/issues/707>`_
+* better installation instructions
+* fix(snap): reapply changes remove by the merge of main (`#703 <https://github.com/facontidavide/PlotJuggler/issues/703>`_)
+* save ColorMaps in layout
+* Contributors: Bartimaeus-, Davide Faconti, Guillaume Beuzeboc, grekiki
+
+3.5.1 (2022-07-25)
+------------------
+* Dev/ros1 ros2 snap (`#698 <https://github.com/facontidavide/PlotJuggler/issues/698>`_)
+* update nlohmann json to fix `#640 <https://github.com/facontidavide/PlotJuggler/issues/640>`_
+* should prevent error `#696 <https://github.com/facontidavide/PlotJuggler/issues/696>`_
+* Merge branch 'improved_zoomout' into main
+* cleanup after `#702 <https://github.com/facontidavide/PlotJuggler/issues/702>`_
+* Statistics dialog improvements and bug fixes (`#702 <https://github.com/facontidavide/PlotJuggler/issues/702>`_)
+* Include std::thread instead of QThread, since it is being utilized in the mqtt plugin instead of QThread. (`#700 <https://github.com/facontidavide/PlotJuggler/issues/700>`_)
+* fix zmq compilation
+* cherry picking from `#698 <https://github.com/facontidavide/PlotJuggler/issues/698>`_
+* increase playback step precision (`#692 <https://github.com/facontidavide/PlotJuggler/issues/692>`_)
+* Fix typo in ColorMap warning (`#693 <https://github.com/facontidavide/PlotJuggler/issues/693>`_)
+* Set buttonBackground icon in .ui file (`#694 <https://github.com/facontidavide/PlotJuggler/issues/694>`_)
+* Update README.md
+* Fix `#697 <https://github.com/facontidavide/PlotJuggler/issues/697>`_
+* update sol2 and fix `#687 <https://github.com/facontidavide/PlotJuggler/issues/687>`_
+* try to improve the linked zoomout
+* Contributors: Bartimaeus-, Davide Faconti, Guillaume Beuzeboc, Hugal31, ozzdemir
+
+3.5.0 (2022-07-12)
+------------------
+* license changed to MPL 2.0
+* Macos ci (`#685 <https://github.com/facontidavide/PlotJuggler/issues/685>`_)
+* Add CSV table preview and CSV highlighting (`#680 <https://github.com/facontidavide/PlotJuggler/issues/680>`_)
+  * Add CSV table preview and CSV highlighting
+  * add toggles for enabling CSV table view and syntax highlighting
+* Fix start/end time bug in CSV Exporter (`#682 <https://github.com/facontidavide/PlotJuggler/issues/682>`_)
+* Add tooltips to CSV publisher buttons (`#683 <https://github.com/facontidavide/PlotJuggler/issues/683>`_)
+  -Add tooltips to the buttons that set the start/end time based on vertical time tracker position
+  -add missing space in text ("timerange" to "time range")
+* Fix `#415 <https://github.com/facontidavide/PlotJuggler/issues/415>`_
+* add statistics
+* Add background editor
+* fix crash in Parquet plugin
+* Add line numbers to csv loader (`#679 <https://github.com/facontidavide/PlotJuggler/issues/679>`_)
+* Fix type-o in reactive script editor (`#678 <https://github.com/facontidavide/PlotJuggler/issues/678>`_)
+  missing "r" in "ScatterXY"
+* Contributors: Bartimaeus-, Davide Faconti
+
+3.4.5 (2022-06-29)
+------------------
+* fix compilation
+* add QCodeEditor
+* CI: cmake ubuntu/Windows
+* Fix CSV generated time axis. (`#666 <https://github.com/facontidavide/PlotJuggler/issues/666>`_)
+  Previously the CSV dataload plugin was not saving the correct XML state
+  when a generated time axis was used.
+* Added support for converted int types (`#673 <https://github.com/facontidavide/PlotJuggler/issues/673>`_)
+  * Added support for converted int types
+  * Added fallback for int32 and int64
+  Co-authored-by: Rano Veder <r.veder@primevision.com>
+* Add tooltip to the zoom out button (`#670 <https://github.com/facontidavide/PlotJuggler/issues/670>`_)
+* PlotJuggler will generate its own cmake target
+* Parquet plugin (`#664 <https://github.com/facontidavide/PlotJuggler/issues/664>`_)
+* fix Cancel button in CSV loader (`#659 <https://github.com/facontidavide/PlotJuggler/issues/659>`_)
+* Make tutorial link open in browser when clicked (`#660 <https://github.com/facontidavide/PlotJuggler/issues/660>`_)
+  Similar to https://github.com/facontidavide/PlotJuggler/pull/658 but applied to the tutorial link in the reactive lua editor
+* accept white lines in CSV
+* Update README.md (`#661 <https://github.com/facontidavide/PlotJuggler/issues/661>`_)
+* Make link open in browser when clicked (`#658 <https://github.com/facontidavide/PlotJuggler/issues/658>`_)
+  Set openExternalLinks property of label_4 to true to allow the hyperlink to open in a web browser when clicked
+* Fix  `#655 <https://github.com/facontidavide/PlotJuggler/issues/655>`_. Add autoZoom to transform dialog
+* Rememvber CSV time column. Cherry picking from `#657 <https://github.com/facontidavide/PlotJuggler/issues/657>`_.
+* fix `#650 <https://github.com/facontidavide/PlotJuggler/issues/650>`_
+* Contributors: Andrew Goessling, Bartimaeus-, Davide Faconti, Konstantinos Lyrakis, Rano Veder, Zach Davis
+
+3.4.4 (2022-05-15)
+------------------
+* fix issue `#561 <https://github.com/facontidavide/PlotJuggler/issues/561>`_
+* add STATUS to CmakeLists.txt message() to avoid 'message called with incorrect number of arguments' (`#649 <https://github.com/facontidavide/PlotJuggler/issues/649>`_)
+  cmake 3.22.1 errors on this
+* Passing CI on ROS2 Rolling (`#629 <https://github.com/facontidavide/PlotJuggler/issues/629>`_)
+  * fix ament-index-cpp dependency on ubuntu jammy
+  * add rolling ci
+* Modify install command and make it easier to install (`#620 <https://github.com/facontidavide/PlotJuggler/issues/620>`_)
+* Contributors: Davide Faconti, Kenji Brameld, Krishna, Lucas Walter
+
 3.4.3 (2022-03-06)
 ------------------
 * Apply changes to reactive Scripts

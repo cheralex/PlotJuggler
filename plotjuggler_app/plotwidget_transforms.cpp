@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "plotwidget_transforms.h"
 #include "ui_plotwidget_transforms.h"
 #include <QHBoxLayout>
@@ -12,9 +18,7 @@
 #include <qwt_text.h>
 
 DialogTransformEditor::DialogTransformEditor(PlotWidget* plotwidget)
-  : QDialog(plotwidget)
-  , ui(new Ui::plotwidget_transforms)
-  , _plotwidget_origin(plotwidget)
+  : QDialog(plotwidget), ui(new Ui::plotwidget_transforms), _plotwidget_origin(plotwidget)
 {
   ui->setupUi(this);
 
@@ -116,7 +120,7 @@ void DialogTransformEditor::on_listCurves_itemSelectionChanged()
 
   auto curve_it = _plotwidget->curveFromTitle(curve_name);
   int transform_row = 0;
-  if( auto ts = dynamic_cast<TransformedTimeseries*>(curve_it->curve->data()) )
+  if (auto ts = dynamic_cast<TransformedTimeseries*>(curve_it->curve->data()))
   {
     if (ts->transform())
     {
@@ -214,7 +218,14 @@ void DialogTransformEditor::on_listTransforms_itemSelectionChanged()
     {
       connect(ts->transform().get(), &TransformFunction::parametersChanged, this, [=]() {
         ts->updateCache(true);
-        _plotwidget->zoomOut(false);
+        if (ui->checkBoxAutoZoom->isChecked())
+        {
+          _plotwidget->zoomOut(false);
+        }
+        else
+        {
+          _plotwidget->replot();
+        }
       });
       _connected_transform_widgets.insert(widget);
     }
@@ -232,10 +243,16 @@ void DialogTransformEditor::on_pushButtonSave_clicked()
 {
   on_lineEditAlias_editingFinished();
 
+  QSettings settings;
+  bool autozoom_filter_applied = settings.value("Preferences::autozoom_filter_applied",true).toBool();
   QDomDocument doc;
   auto elem = _plotwidget->xmlSaveState(doc);
-  _plotwidget_origin->xmlLoadState(elem);
-  _plotwidget_origin->zoomOut(false);
+  _plotwidget_origin->xmlLoadState(elem,autozoom_filter_applied);
+
+  if(autozoom_filter_applied)
+  {
+    _plotwidget_origin->zoomOut(false);
+  }
 
   this->accept();
 }

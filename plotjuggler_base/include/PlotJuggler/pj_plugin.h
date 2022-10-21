@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #ifndef PJ_PLUGIN_H
 #define PJ_PLUGIN_H
 
@@ -9,6 +15,7 @@
 
 namespace PJ
 {
+
 /**
  * @brief The PlotJugglerPlugin is the base class of all the plugins.
  */
@@ -61,6 +68,7 @@ public:
     static std::vector<QAction*> empty;
     return empty;
   }
+
 };
 
 }  // namespace PJ

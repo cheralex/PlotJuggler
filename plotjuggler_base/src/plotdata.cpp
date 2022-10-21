@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "PlotJuggler/plotdata.h"
 
 namespace PJ
@@ -36,13 +42,14 @@ T& getOrCreateImpl(std::unordered_map<std::string, T>& series, const std::string
   return it->second;
 }
 
-ScatterXYMap::iterator PlotDataMapRef::addScatterXY(const std::string &name, PlotGroup::Ptr group)
+ScatterXYMap::iterator PlotDataMapRef::addScatterXY(const std::string& name,
+                                                    PlotGroup::Ptr group)
 {
   return addImpl(scatter_xy, name, group);
 }
 
 TimeseriesMap::iterator PlotDataMapRef::addNumeric(const std::string& name,
-                                                 PlotGroup::Ptr group)
+                                                   PlotGroup::Ptr group)
 {
   return addImpl(numeric, name, group);
 }
@@ -59,7 +66,7 @@ StringSeriesMap::iterator PlotDataMapRef::addStringSeries(const std::string& nam
   return addImpl(strings, name, group);
 }
 
-PlotDataXY &PlotDataMapRef::getOrCreateScatterXY(const std::string &name,
+PlotDataXY& PlotDataMapRef::getOrCreateScatterXY(const std::string& name,
                                                  PlotGroup::Ptr group)
 {
   return getOrCreateImpl(scatter_xy, name, group);

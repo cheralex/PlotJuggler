@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include <limits>
 #include <QDebug>
 #include <QWheelEvent>
@@ -89,7 +95,8 @@ void PlotMagnifier::rescale(double factor, AxisMode axis)
       v2 = center + width * temp_factor * (ratio);
 
       bool reversed_axis = false;
-      if (v1 > v2){
+      if (v1 > v2)
+      {
         reversed_axis = true;
         std::swap(v1, v2);
       }
@@ -103,11 +110,12 @@ void PlotMagnifier::rescale(double factor, AxisMode axis)
       v1 = std::max(v1, _lower_bounds[axisId]);
       v2 = std::min(v2, _upper_bounds[axisId]);
 
-      if( reversed_axis )
+      if (reversed_axis)
       {
         plt->setAxisScale(axisId, v2, v1);
       }
-      else{
+      else
+      {
         plt->setAxisScale(axisId, v1, v2);
       }
 

@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 #include "plotwidget_editor.h"
 #include "ui_plotwidget_editor.h"
 #include <QHBoxLayout>
@@ -32,7 +38,7 @@ PlotwidgetEditor::PlotwidgetEditor(PlotWidget* plotwidget, QWidget* parent)
   _plotwidget->on_changeTimeOffset(plotwidget->timeOffset());
   _plotwidget->setContextMenuEnabled(false);
 
-  _bounding_rect_original = _plotwidget_origin->canvasBoundingRect();
+  _bounding_rect_original = _plotwidget_origin->currentBoundingRect();
 
   auto layout = new QVBoxLayout();
   ui->framePlotPreview->setLayout(layout);
