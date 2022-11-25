@@ -29,6 +29,7 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
   timeSlider = parent->findChild<QSlider*>("timeSlider");
   if (timeSlider) {
       connect(this, SIGNAL(setTime(double)), timeSlider, SLOT(setCurrentValue(double)));
+      connect(timeSlider, SIGNAL(realValueChanged(double)), this, SLOT(timeSliderChanged(double)));
   }
 
   table_info->setRowCount(parser.getInfo().size());
@@ -63,6 +64,7 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
 
   table_logs->setRowCount(parser.getLogs().size());
   row = 0;
+
   for (const auto& log_msg : parser.getLogs())
   {
     QString time = QString::number(0.001 * double(log_msg.timestamp / 1000), 'f', 2);
@@ -99,9 +101,13 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
     }
     table_logs->setItem(row, 2,
                         new QTableWidgetItem(QString::fromStdString(log_msg.msg)));
+
+    info_rows_by_ts.emplace(0.001 * double(log_msg.timestamp / 1000), row);
+
     row++;
   }
   connect(table_logs, &QTableWidget::cellPressed, this, &ULogParametersDialog::paramCellPressed);
+  connect(this, &ULogParametersDialog::logRowSelected, table_logs, &QTableWidget::selectRow);
 
   loadAlertDefinitions();
 
@@ -126,9 +132,12 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
 
          table_alerts->setItem(row, 1, new QTableWidgetItem(getAlertLevel(alert.level)));
 
+         alerts_rows_by_ts.emplace(0.001 * double(alert.ts / 1000), row);
+
          row++;
       }
       connect(table_alerts, &QTableWidget::cellPressed, this, &ULogParametersDialog::alertCellPressed);
+      connect(this, &ULogParametersDialog::alertRowSelected, table_alerts, &QTableWidget::selectRow);
   } else {
       table_alerts->setVisible(false);
   }
@@ -242,4 +251,26 @@ int ULogParametersDialog::replaceParamPlaceholder(QString& pattern) {
         }
     }
     return counter;
+}
+
+void ULogParametersDialog::timeSliderChanged(double value) {
+    std::pair<double, int> tmp(-1, 0);
+    for (auto const &pair : info_rows_by_ts) {
+        if (pair.first > value)
+            break;
+        tmp = pair;
+    }
+
+    if (tmp.first > 0)
+        emit logRowSelected(tmp.second);
+
+    tmp.first = -1;
+    for (auto const &pair : alerts_rows_by_ts) {
+        if (pair.first > value)
+            break;
+        tmp = pair;
+    }
+
+    if (tmp.first > 0)
+        emit alertRowSelected(tmp.second);
 }

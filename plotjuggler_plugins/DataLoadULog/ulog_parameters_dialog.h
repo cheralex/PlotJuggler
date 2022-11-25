@@ -27,6 +27,9 @@ private:
   Ui::ULogParametersDialog* ui;
   QSlider* timeSlider;
   std::map<int, ULogParser::AlertDefinition> alertsDefs;
+  std::set<std::pair<double, int>> info_rows_by_ts;
+  std::set<std::pair<double, int>> alerts_rows_by_ts;
+
   void paramCellPressed(int row, int colum);
   void alertCellPressed(int row, int colum);
   bool loadAlertDefinitions();
@@ -36,5 +39,9 @@ private:
 
 signals:
   void setTime(double);
+  void alertRowSelected(int);
+  void logRowSelected(int);
 
+private slots:
+  void timeSliderChanged(double);
 };
