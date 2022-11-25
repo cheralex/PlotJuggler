@@ -9,6 +9,8 @@
 
 #include <QSlider>
 
+#include <math.h>
+
 class RealSlider : public QSlider
 {
   Q_OBJECT
@@ -36,6 +38,7 @@ public:
 private slots:
   void onValueChanged(int value);
 
+   void setCurrentValue(double val);
 signals:
   void realValueChanged(double);
 

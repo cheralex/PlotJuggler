@@ -237,6 +237,7 @@ add_subdirectory( 3rdparty/QCodeEditor )
 add_subdirectory( 3rdparty/color_widgets )
 add_subdirectory( 3rdparty/Qt-Advanced-Docking )
 add_subdirectory( 3rdparty/lua-5.4.3 )
+add_subdirectory( 3rdparty/fmt )
 
 if (NOT WIN32)
   add_subdirectory( 3rdparty/backward-cpp )
@@ -263,8 +264,8 @@ add_subdirectory( plotjuggler_plugins/ToolboxFFT )
 add_subdirectory( plotjuggler_plugins/ToolboxLuaEditor )
 
 add_subdirectory( plotjuggler_plugins/ParserProtobuf )
+#add_subdirectory( plotjuggler_plugins/ParserROS )
 add_subdirectory( plotjuggler_plugins/DataLoadAPBin )
-add_subdirectory( plotjuggler_plugins/ParserROS )
 
 # Install targets
 

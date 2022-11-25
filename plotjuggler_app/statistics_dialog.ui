@@ -22,6 +22,9 @@
      <property name="sortingEnabled">
       <bool>false</bool>
      </property>
+     <property name="columnCount">
+      <number>7</number>
+     </property>
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
      </attribute>
@@ -50,6 +53,16 @@
        <string>Average</string>
       </property>
      </column>
+     <column>
+      <property name="text">
+       <string>Variance</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Deviation</string>
+      </property>
+     </column>
     </widget>
    </item>
    <item>
@@ -58,7 +71,6 @@
       <widget class="QLabel" name="label">
        <property name="font">
         <font>
-         <family>Segoe UI</family>
          <pointsize>9</pointsize>
         </font>
        </property>
@@ -83,7 +95,6 @@
        </property>
        <property name="font">
         <font>
-         <family>Segoe UI</family>
          <pointsize>9</pointsize>
         </font>
        </property>
@@ -103,7 +114,6 @@
       <widget class="QDialogButtonBox" name="buttonBox">
        <property name="font">
         <font>
-         <family>Segoe UI</family>
          <pointsize>9</pointsize>
         </font>
        </property>

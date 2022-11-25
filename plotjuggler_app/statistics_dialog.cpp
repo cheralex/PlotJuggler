@@ -75,22 +75,44 @@ void StatisticsDialog::update(PJ::Range range)
       }
       stat.mean_tot += p.y();
     }
+    // Variance calculation
+    double mean = stat.count > 0 ? stat.mean_tot/double(stat.count) : 0.0;
+
+    for (size_t i = 0; i < ts->size() && stat.count > 0; i++)
+    {
+      const auto p = ts->sample(i);
+      if (calcVisibleRange())
+      {
+        if (p.x() < range.min)
+        {
+          continue;
+        }
+        if (p.x() > range.max)
+        {
+          break;
+        }
+      }
+      stat.var_tot += (p.y() - mean) * (p.y() - mean);
+    }
     statistics[info.curve->title().text()] = stat;
   }
-
-  ui->tableWidget->setRowCount(statistics.size());
+  ui->tableWidget->setRowCount(statistics.size());  
   int row = 0;
   for (const auto& it : statistics)
   {
     const auto& stat = it.second;
 
-    std::array<QString, 5> row_values;
+    std::array<QString, 7> row_values;
     row_values[0] = it.first;
     row_values[1] = QString::number(stat.count);
     row_values[2] = QString::number(stat.min, 'f');
     row_values[3] = QString::number(stat.max, 'f');
     double mean = stat.mean_tot / double(stat.count);
+    double var = stat.var_tot / double(stat.count);
+    double deviation = sqrt(var);
     row_values[4] = QString::number(mean, 'f');
+    row_values[5] = QString::number(var, 'f');
+    row_values[6] = QString::number(deviation, 'f');
 
     for (size_t col = 0; col < row_values.size(); col++)
     {

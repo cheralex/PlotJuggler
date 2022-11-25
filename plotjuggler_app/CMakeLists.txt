@@ -91,6 +91,7 @@ SET( PLOtJUGGLER_SRC
 
     mainwindow.h
     realslider.h
+    realslider.cpp
 
     nlohmann_parsers.cpp
     )

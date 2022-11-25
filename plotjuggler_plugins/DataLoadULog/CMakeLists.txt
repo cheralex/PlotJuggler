@@ -1,4 +1,3 @@
-
 include_directories(  ../ )
 
 add_definitions(${QT_DEFINITIONS})
@@ -17,10 +16,15 @@ SET( SRC
 
 add_library(DataLoadULog SHARED ${SRC} ${UI_SRC}  )
 
+set(RESOURCE_FILES alert.json)
+
+set_target_properties(PROPERTIES RESOURCE "${RESOURCE_FILES}")
+
 target_link_libraries(DataLoadULog
     ${Qt5Widgets_LIBRARIES}
     ${Qt5Xml_LIBRARIES}
-    plotjuggler_base)
+    plotjuggler_base
+    fmt)
 
 install(TARGETS DataLoadULog DESTINATION ${PJ_PLUGIN_INSTALL_DIRECTORY}  )
 

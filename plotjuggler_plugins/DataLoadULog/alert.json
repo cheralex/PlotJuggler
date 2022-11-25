@@ -1,0 +1,614 @@
+{
+    "alerts": [
+        {
+            "name": "NOT_READY_FIRST",
+            "code": 100,
+            "message": "",
+            "virtual": 1
+        },
+        {
+            "name": "NOT_READY_PATH",
+            "code": 100,
+            "message": "Path load error",
+            "description": "Dance path is not loaded or is invalid",
+            "recommendations": "Upload / reupload path"
+        },
+        {
+            "name": "NOT_READY_NO_XYZ",
+            "code": 101,
+            "message": "No coordinates in path",
+            "description": "Dance path is invalid",
+            "recommendations": "Check your path file for correctness"
+        },
+        {
+            "name": "NOT_READY_CENTER",
+            "code": 102,
+            "message": "Dance center is not defined",
+            "description": "Dance center is not defined",
+            "recommendations": "Set and upload dance center location"
+        },
+        {
+            "name": "NOT_READY_TIME",
+            "code": 103,
+            "message": "Start time is not defined",
+            "description": "Start time is not defined",
+            "recommendations": "Set and upload dance start time"
+        },
+        {
+            "name": "NOT_READY_MIN_ALT",
+            "code": 104,
+            "message": "Min altitude in path = {0:F1}",
+            "description": "Minimum dance altitude is lower then DANCE_MIN_ALT",
+            "recommendations": "Check minimum relative altitude. Increase dance center AMSL altitude and upload location"
+        },
+        {
+            "name": "NOT_READY_TKO_ALT_LOW",
+            "code": 105,
+            "message": "Takeoff alt too low = {0:F1}",
+            "description": "Takeoff altitude is lower than DANCE_MIN_ALT",
+            "recommendations": "Increase value of DANCE_TK_ALT parameter"
+        },
+        {
+            "name": "NOT_READY_FPDIST",
+            "code": 106,
+            "message": "First point is too far ({0:F1} m)",
+            "description": "First dance point is too far",
+            "recommendations": "Check the distance of first dance points relative to drone positions. Set and upload location of needed."
+        },
+        {
+            "name": "NOT_READY_FENCE_DISABLED",
+            "code": 107,
+            "message": "Alt and Circle fences not enabled",
+            "description": "Geofence is not enabled",
+            "recommendations": "Set and upload fence"
+        },
+        {
+            "name": "NOT_READY_GF_ACTION",
+            "code": 108,
+            "message": "GF_ACTION = {0:F0}, must be at least 2",
+            "description": "Action on geofence breach not set",
+            "recommendations": "Set parameter GF_ACTION to either 3 (RTL) or 5 (LAND)"
+        },
+        {
+            "name": "NOT_READY_CBRK_FLIGHTTERM",
+            "code": 109,
+            "message": "CBRK_FLIGHTTERM=121212 required",
+            "description": "Flight termination circuit breaker not set.",
+            "recommendations": "Set parameter CBRK_FLIGHTTERM = 121212",
+            "DEPRECATED": "Since 1.12 version CBRK_FLIGHTTERM is not used during failsaves"
+        },
+        {
+            "name": "NOT_READY_MAX_ALT",
+            "code": 110,
+            "message": "Max altitude in path too high ({0:F1} m)",
+            "description": "Maximum altitude in the dance is higher than fence altitude",
+            "recommendations": "Decrease dance center AMSL altitude and upload location or increase fence altitude"
+        },
+        {
+            "name": "NOT_READY_FPS",
+            "code": 111,
+            "message": "FPS = {0:F1}, must be between 0.001 and 30",
+            "description": "Incorrect DANCE_FPS value",
+            "recommendations": "Set parameter DANCE_FPS = 4 (or other required value but no higher than 30) or check your Path file if using PathV3"
+        },
+        {
+            "name": "NOT_READY_FENCE_BREACH",
+            "code": 112,
+            "message": "Path violates fence",
+            "description": "Dance path violates geofence",
+            "recommendations": "Check and adjust fence and/or dance center settings"
+        },
+        {
+            "name": "NOT_READY_PATH_TYPE",
+            "code": 113,
+            "message": "DANCE_TYPE = {0:F0}, must be 0 or 1",
+            "description": "Incorrect dance type set",
+            "recommendations": "Set parameter DANCE_TYPE = 0"
+        },
+        {
+            "name": "NOT_READY_AIRBORNE",
+            "code": 114,
+            "message": "Airborne without dance mode",
+            "description": "Vehicle is airborne",
+            "recommendations": "Land the vehicle"
+        },
+        {
+            "name": "NOT_READY_XY_SPEED",
+            "code": 115,
+            "message": "Max XY speed = {0:F1} m/s, must be less than MPC_XY_VEL_MAX",
+            "description": "Maximum horizontal velocity exceeded in path",
+            "recommendations": "Make sure that dance does not exceed maximum allowed horizontal velocity or adjust MPC_XY_VEL_MAX"
+        },
+        {
+            "name": "NOT_READY_UP_SPEED",
+            "code": 116,
+            "message": "Max UP speed = {0:F1} m/s, must be less than MPC_Z_VEL_MAX_UP",
+            "description": "Maximum upward velocity exceeded in path",
+            "recommendations": "Make sure that dance does not exceed maximum allowed vertical UP velocity or adjust MPC_Z_VEL_MAX_UP"
+        },
+        {
+            "name": "NOT_READY_DN_SPEED",
+            "code": 117,
+            "message": "Max DN speed = {0:F1} m/s, must be less than MPC_Z_VEL_MAX_DN",
+            "description": "Maximum downward velocity exceeded in path",
+            "recommendations": "Make sure that dance does not exceed maximum allowed vertical DOWN velocity or adjust MPC_Z_VEL_MAX_DN"
+        },
+        {
+            "name": "NOT_READY_RETURN_ALT_HIGH",
+            "code": 118,
+            "message": "RTL_RETURN_ALT {0:F1} m >= fence_alt {1:F1} m",
+            "description": "RTL return altitude exceeds fence altitude",
+            "recommendations": "Decrease RTL_RETURN_ALT or increase fence altitude"
+        },
+        {
+            "name": "NOT_READY_DESCEND_ALT_HIGH",
+            "code": 119,
+            "message": "RTL_DESCEND_ALT {0:F1} m >= fence_alt {1:F1} m",
+            "description": "RTL descend altitude exceeds fence altitude",
+            "recommendations": "Decrease RTL_DESCEND_ALT or increase fence altitude"
+        },
+        {
+            "name": "NOT_READY_TKO_ALT_HIGH",
+            "code": 120,
+            "message": "DANCE_TK_ALT {0:F1} m >= fence_alt {1:F1} m",
+            "description": "Takeoff altitude exceeds fence altitude",
+            "recommendations": "Decrease DANCE_TK_ALT or increase fence altitude"
+        },
+        {
+            "name": "NOT_READY_TKO_VEL",
+            "code": 121,
+            "message": "DANCE_TKOFF_VEL = {0:F1} m/s is out of range",
+            "description": "Incorrect takeoff velocity set",
+            "recommendations": "Set parameter DANCE_TKOFF_VEL = 1.5 , not to be larger than MPC_Z_VEL_MAX_UP"
+        },
+        {
+            "name": "NOT_READY_MVPOS_HVEL",
+            "code": 122,
+            "message": "DANCE_MVPOS_HVEL = {0:F1} m/s is out of range",
+            "description": "Incorrect horizontal move position velocity set",
+            "recommendations": "Set parameter DANCE_MVPOS_HVEL = 2.5 , not to be larger than MPC_XY_VEL_MAX"
+        },
+        {
+            "name": "NOT_READY_MVPOS_VVEL",
+            "code": 123,
+            "message": "DANCE_MVPOS_VVEL = {0:F1} m/s is out of range",
+            "description": "Incorrect vertical move position velocity set",
+            "recommendations": "Set parameter DANCE_MVPOS_VVEL = 1.5 , not to be larger than MPC_Z_VEL_MAX_UP"
+        },
+        {
+            "name": "NOT_READY_TKO_TIME",
+            "code": 124,
+            "message": "Takeoff time too short. Allocated ({0:F1}) sec. Missing ({1:F1}) sec.",
+            "description": "Takeoff time not sufficient to reach takeoff position",
+            "recommendations": "Adjust DANCE_TK_OFF and/or DANCE_MV_POS or decrease takeoff altitude DANCE_TK_ALT"
+        },
+        {
+            "name": "NOT_READY_MTP_TIME_XY",
+            "code": 125,
+            "message": "Move-to-pos horizontal time too short Allocated ({0:F1}) sec. Missing ({1:F1}) sec.",
+            "description": "Move position time not sufficient to reach first dance position horizontally",
+            "recommendations": "Adjust DANCE_MV_POS, DANCE_MVPOS_HVEL value and/or Dance Center position"
+        },
+        {
+            "name": "NOT_READY_TKO_MTP_TIME_Z",
+            "code": 126,
+            "message": "Not enough time to gain altitude during tko+mtp. Allocated ({0:F1}) sec. Missing ({1:F1}) sec.",
+            "description": "Not enough time to reach takeoff and first dance position",
+            "recommendations": "Adjust DANCE_TK_OFF and/or DANCE_MV_POS. Check and adjust takeoff altitude DANCE_TK_ALT and Dance Center altitude"
+        },
+        {
+            "name": "NOT_READY_TKO_MTP_TIME_XY",
+            "code": 127,
+            "message": "Not enough time for horizontal move-to-pos. Allocated ({0:F1}) sec. Missing ({1:F1}) sec.",
+            "description": "Move position time not sufficient to reach first dance position horizontally",
+            "recommendations": "Adjust DANCE_TK_OFF and/or DANCE_MV_POS and/or Dance Center position"
+        },
+        {
+            "name": "NOT_READY_MTP_TIME_Z",
+            "code": 128,
+            "message": "Move-to-pos vertical time too short Allocated ({0:F1}) sec. Missing ({1:F1}) sec.",
+            "description": "Move position time not sufficient to reach first dance position vertically",
+            "recommendations": "Adjust DANCE_MV_POS and/or DANCE_MVPOS_VVEL value and/or Dance Center altitude"
+        },
+        {
+            "name": "NOT_READY_PATH_BUF_SIZE",
+            "code": 129,
+            "message": "DANCE_PATH_BUF must be at least 1000 bytes",
+            "description": "Buffer size is less than minimum allowed",
+            "recommendations": "Set parameter DANCE_PATH_BUF = 18000"
+        },
+        {
+            "name": "INITIAL_CONFIG",
+            "code": 130,
+            "message": "Initial drone configuration needed (airframe selection)",
+            "description": "Vehicle airframe not selected (initial configuration needed)",
+            "recommendations": "Connect vehicle to QGC software and select airframe used"
+        },
+        {
+            "name": "PATH_UNSUPPORTED",
+            "code": 131,
+            "message": "Unsupported PATH file version",
+            "description": "Unsupported PATH file version",
+            "recommendations": "Update drone firmware to use this PATH file"
+        },
+        {
+            "name": "NOT_READY_LAST",
+            "code": 199,
+            "message": "",
+            "virtual": 1
+        },
+        {
+            "name": "MODULE_LAG",
+            "code": 200,
+            "message": "Flight controller lag ({0:F0} ms)",
+            "description": "Flight controller lag",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "MEMORY_LOW",
+            "code": 201,
+            "message": "Only {0:F0} KB RAM free",
+            "description": "The working memory of your flight controller is almost all used up",
+            "recommendations": "Consider disabling some of your flight controller sensors"
+        },
+        {
+            "name": "OUT_OF_MEMORY",
+            "code": 202,
+            "message": "Out of memory",
+            "description": "Flight controller is our of working memory",
+            "recommendations": "Consider disabling some of your flight controller sensors"
+        },
+        {
+            "name": "SD_READ_LAG",
+            "code": 203,
+            "message": "SD card read lag ({0:F0} ms)",
+            "description": "SD card read speed is less than expected",
+            "recommendations": "Consider changing the SD card or replacing the drone"
+        },
+        {
+            "name": "SD_WRITE_LAG",
+            "code": 204,
+            "message": "SD card write lag ({0:F0} ms)",
+            "description": "SD card write speed is less than expected",
+            "recommendations": "Consider changing the SD card or replacing the drone"
+        },
+        {
+            "name": "SD_READ_ERROR",
+            "code": 205,
+            "message": "SD card read error",
+            "description": "The flight controller cannot read from the SD Card",
+            "recommendations": "Consider changing the SD card or replacing the drone"
+        },
+        {
+            "name": "SD_WRITE_ERROR",
+            "code": 206,
+            "message": "SD card write error",
+            "description": "The flight controller cannot write to the SD Card",
+            "recommendations": "Consider changing the SD card or replacing the drone"
+        },
+        {
+            "name": "MAG_FAILED",
+            "code": 220,
+            "message": "All magnetometers failed",
+            "description": "All the available magnetometers have failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "ACC_FAILED",
+            "code": 221,
+            "message": "All accelerometers failed",
+            "description": "All the available accelerometers have failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "GYRO_FAILED",
+            "code": 222,
+            "message": "All gyroscopes failed",
+            "description": "All the available gyroscopes have failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "PRIMARY_MAG_FAILED",
+            "code": 223,
+            "message": "Primary magnetometer failed",
+            "description": "The primary magnetometer has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "PRIMARY_ACC_FAILED",
+            "code": 224,
+            "message": "Primary accelerometer failed",
+            "description": "The primary accelerometer has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "PRIMARY_GYRO_FAILED",
+            "code": 225,
+            "message": "Primary gyroscope failed",
+            "description": "The primary gyroscope has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "SECONDARY_MAG_FAILED",
+            "code": 226,
+            "message": "Secondary magnetometer failed",
+            "description": "The secondary magnetometer has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "SECONDARY_ACC_FAILED",
+            "code": 227,
+            "message": "Secondary accelerometer failed",
+            "description": "The secondary accelerometer has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "SECONDARY_GYRO_FAILED",
+            "code": 228,
+            "message": "Secondary gyroscope failed",
+            "description": "The secondary gyroscope has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "BARO_FAILED",
+            "code": 229,
+            "message": "Barometer failed",
+            "description": "The barometer has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "GPS_FAILED",
+            "code": 230,
+            "message": "GPS failed",
+            "description": "The GPS sensor has failed",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "MAG_NO_CALIB",
+            "code": 231,
+            "message": "Magnetometer not calibrated",
+            "description": "Magnetometer calibration is pending",
+            "recommendations": "Perform magnetometer calibration"
+        },
+        {
+            "name": "ACC_NO_CALIB",
+            "code": 232,
+            "message": "Accelerometer not calibrated",
+            "description": "Accelerometer calibration is pending",
+            "recommendations": "Perform accelerometer calibration"
+        },
+        {
+            "name": "GYRO_NO_CALIB",
+            "code": 233,
+            "message": "Gyroscope not calibrated",
+            "description": "Gyroscope calibration is pending",
+            "recommendations": "Perform gyroscope calibration"
+        },
+        {
+            "name": "GPS_FIX_TYPE",
+            "code": 234,
+            "message": "GPS fix type: {0:F0}",
+            "description": "Current GPS fix type is insufficient for flight",
+            "recommendations": "Wait to acquire the mimimum required GPS fix or change the vehicle"
+        },
+        {
+            "name": "GPS_EPH",
+            "code": 235,
+            "message": "GPS EPH (quality) is {0:F2}",
+            "description": "Current GPS fix accuracy is insufficient for flight",
+            "recommendations": "Wait to acquire the mimimum required GPS accuracy or change the vehicle"
+        },
+        {
+            "name": "NO_RTCM",
+            "code": 236,
+            "message": "RTCM not received",
+            "description": "Drone is not receiving GPS RTK corrections (RTCM)",
+            "recommendations": "Make sure that RTK Tool and Redbutton are configured correctly and WiFi and Secondary channel are connected"
+        },
+        {
+            "name": "VIBRATIONS",
+            "code": 237,
+            "message": "High vibrations: {0:F3}",
+            "description": "Excessive vibrations detected",
+            "recommendations": "Inspect the drone and propellers, if problem persists, change the vehicle"
+        },
+        {
+            "name": "ACCEL_CLIPPING",
+            "code": 238,
+            "message": "Accelerometer clipping: {0:F0} times",
+            "description": "Significant impact detected",
+            "recommendations": "If the problem occurs before flight, reboot flight controller, if in air, consider changing vehicle"
+        },
+        {
+            "name": "SETPOINT_DEVIATION",
+            "code": 239,
+            "message": "Deviation from expected position: {0:F1} m",
+            "description": "Drone is deviating from the expected flight trajectory",
+            "recommendations": "Replace the drone and inspect before further flights"
+        },
+        {
+            "name": "POS_TEST_RATIO",
+            "code": 240,
+            "message": "Position estimation error ratio: {0:F1}",
+            "description": "Drone cannot estimate its position correctly",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "VEL_TEST_RATIO",
+            "code": 241,
+            "message": "Velocity estimation error ratio: {0:F1}",
+            "description": "Drone cannot estimate its velocity correctly",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "HGT_TEST_RATIO",
+            "code": 242,
+            "message": "Height estimation error ratio: {0:F1}",
+            "description": "Drone cannot estimate its altitude correctly",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "MAG_TEST_RATIO",
+            "code": 243,
+            "message": "Magnetometer estimation error ratio: {0:F1}",
+            "description": "Magnetometer data deviates from other sensor data",
+            "recommendations": "Reboot flight controller. If issue persists, change the vehicle"
+        },
+        {
+            "name": "ACCEL_BIAS",
+            "code": 244,
+            "message": "Accelerometer bias: {0:F2}",
+            "description": "Accelereometer data deviates from other sensor data",
+            "recommendations": "Reboot flight controller. If issue persists, re-calibrate accelerometer"
+        },
+        {
+            "name": "NO_GLOBAL_POS",
+            "code": 245,
+            "message": "No global position for {0:F0} seconds",
+            "description": "Drone has not yet acquired its position",
+            "recommendations": "Wait for the drone to acquire global position, if problem persists replace the vehicle"
+        },
+        {
+            "name": "WIND",
+            "code": 246,
+            "message": "Estimated wind: {0:F0} m/s",
+            "description": "Drone reports high wind conditions",
+            "recommendations": "Pay attention! If several drones are reporting this error, consider landing the fleet"
+        },
+        {
+            "name": "CONN_QUALITY",
+            "code": 247,
+            "message": "Bad connection on channel {0:F0}: {1:F0} %",
+            "description": "Connectivity issues over WiFi or Secondary channel detected",
+            "recommendations": "Make sure that RTK Tool and Redbutton are configured correctly and WiFi and Secondary channel are connected",
+            "DEPRECATED": "Replaced with CONN1_QUALITY and CONN2_QUALITY"
+        },
+        {
+            "name": "CONN_QUALITY_BOTH",
+            "code": 248,
+            "message": "Bad connection: {0:F0} %",
+            "description": "Connectivity issues over WiFi and Secondary detected",
+            "recommendations": "Make sure that RTK Tool and Redbutton are configured correctly and WiFi and Secondary channel are connected",
+            "DEPRECATED": "Replaced with CONN1_QUALITY and CONN2_QUALITY"
+        },
+        {
+            "name": "BATTERY",
+            "code": 249,
+            "message": "Battery low",
+            "description": "Drone battery is depleted",
+            "recommendations": "Replace the battery or land the drone if problem occurs while flying"
+        },
+        {
+            "name": "DIST_TO_FENCE",
+            "code": 250,
+            "message": "Close to fence: {0:F0} m",
+            "description": "Vehicle is too close to the geofence",
+            "recommendations": "Adjust the geofence or dance center or land the drone if problem occurs while flying"
+        },
+        {
+            "name": "LEVEL_NO_CALIB",
+            "code": 251,
+            "message": "Level not calibrated",
+            "description": "Level calibration is pending",
+            "recommendations": "Perform level calibration"
+        },
+        {
+            "name": "RC_NO_CALIB",
+            "code": 252,
+            "message": "RC not calibrated",
+            "description": "Remote control calibration is pending",
+            "recommendations": "Perform remote control calibration (set RC_CHAN_CNT and roll/pitch/yaw/throttle channels)"
+        },
+        {
+            "name": "RC_NO_FLIGHT_MODES",
+            "code": 253,
+            "message": "RC flight modes not configured",
+            "description": "RC flight modes not configured",
+            "recommendations": "Configure RC flight modes switch (RC_MAP_FLTMODE should not be zero)"
+        },
+        {
+            "name": "BAT_NO_CONFIG",
+            "code": 254,
+            "message": "Battery not configured",
+            "description": "Battery not configured",
+            "recommendations": "Specify number of cells (BAT_N_CELLS and BAT1_N_CELLS)"
+        },
+        {
+            "name": "BAT_NO_STATUS",
+            "code": 255,
+            "message": "Battery status not available",
+            "description": "Battery status not available",
+            "recommendations": "Reboot the drone. If it has a smart battery, try replacing it."
+        },
+        {
+            "name": "PWM_ERROR",
+            "code": 256,
+            "message": "PWM configuration or output is bad",
+            "description": "PWM configuration or output is bad",
+            "recommendations": "Restart the drone, if the alarm has not disapeared check drone's configuration"
+        },
+        {
+            "name": "INITIALIZING",
+            "code": 257,
+            "message": "Initialization in progress",
+            "description": "Initialization in progress",
+            "recommendations": "Wait until precise position acquired"
+        },
+        {
+            "name": "CONN1_QUALITY",
+            "code": 258,
+            "message": "Bad connection on primary channel: {0:F0} %",
+            "description": "Bad connection on primary channel",
+            "recommendations": "Make sure that RTK Tool and Redbutton are configured correctly and WiFi and Secondary channels are connected"
+        },
+        {
+            "name": "CONN2_QUALITY",
+            "code": 259,
+            "message": "Bad connection on secondary channel: {0:F0} %",
+            "description": "Bad connection on secondary channel",
+            "recommendations": "Make sure that RTK Tool and Redbutton are configured correctly and WiFi and Secondary channels are connected"
+        },
+        {
+            "name": "GPS_TIME",
+            "code": 260,
+            "message": "System time differs from GPS time by {0:F0} ms",
+            "description": "System time differs from GPS time",
+            "recommendations": "Reboot the drone"
+        },
+        {
+            "name": "ESCS_FAILED",
+            "code": 261,
+            "message": "ESCs failed",
+            "description": "ESCs failed",
+            "recommendations": "Replace drone (or change COM_ARM_CHK_ESCS to 0 if your ESCs do not support telemetry)"
+        },
+        {
+            "name": "NO_HOME_POS",
+            "code": 262,
+            "message": "Home position is not defined",
+            "description": "Home position is not defined",
+            "recommendations": "Position accuracy is not enough. Wait for precise position or check GPS quality"
+        },
+        {
+            "name": "EKF_GPS_DIFF",
+            "code": 263,
+            "message": "Estimated position differs from GPS by {0:F1} meters",
+            "description": "Estimated position differs from GPS position",
+            "recommendations": "Inaccurate position estimation. Land the drone if this persists"
+        },
+        {
+            "name": "PATH_ERROR",
+            "code": 264,
+            "message": "Path reading failed, hovering",
+            "description": "Path reading failed, hovering",
+            "recommendations": "Land the drone and check/replace SD card"
+        },
+        {
+            "name": "MAG_INCONSISTENCY",
+            "code": 265,
+            "message": "Compasses {0:F0}° inconsistent",
+            "description": "Compasses inconsistent",
+            "recommendations": "Check orientations and recalibrate magnetometers"
+        }
+    ]
+}

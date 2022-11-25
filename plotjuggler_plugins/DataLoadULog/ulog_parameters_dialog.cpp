@@ -5,6 +5,17 @@
 #include <QSettings>
 #include <QHeaderView>
 
+#include <QDebug>
+
+#include <math.h>
+
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+
+#include <fmt/core.h>
+
 ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* parent)
   : QDialog(parent), ui(new Ui::ULogParametersDialog)
 {
@@ -12,6 +23,13 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
   QTableWidget* table_info = ui->tableWidgetInfo;
   QTableWidget* table_params = ui->tableWidgetParams;
   QTableWidget* table_logs = ui->tableWidgetLogs;
+  QTableWidget* table_alerts = ui->tableWidgetAlerts;
+
+
+  timeSlider = parent->findChild<QSlider*>("timeSlider");
+  if (timeSlider) {
+      connect(this, SIGNAL(setTime(double)), timeSlider, SLOT(setCurrentValue(double)));
+  }
 
   table_info->setRowCount(parser.getInfo().size());
   int row = 0;
@@ -83,6 +101,37 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
                         new QTableWidgetItem(QString::fromStdString(log_msg.msg)));
     row++;
   }
+  connect(table_logs, &QTableWidget::cellPressed, this, &ULogParametersDialog::paramCellPressed);
+
+  loadAlertDefinitions();
+
+  if (!parser.getAlerts().empty()) {
+      table_alerts->setRowCount(parser.getAlerts().size());
+
+      row = 0;
+      for (const auto& alert : parser.getAlerts()) {
+          QString time = QString::number(0.001 * double(alert.ts / 1000), 'f', 2);
+
+          table_alerts->setItem(row, 0, new QTableWidgetItem(time));
+
+          if (auto def = alertsDefs.find(alert.code); def != alertsDefs.end()) {
+              QString message = def->second.message;
+              if (replaceParamPlaceholder(message) > 0) {
+                    message = message.arg(alert.param1, alert.param2, alert.param3);
+              }
+              table_alerts->setItem(row, 2, new QTableWidgetItem(message));
+          } else {
+              table_alerts->setItem(row, 2, new QTableWidgetItem(alert.code));
+          }
+
+         table_alerts->setItem(row, 1, new QTableWidgetItem(getAlertLevel(alert.level)));
+
+         row++;
+      }
+      connect(table_alerts, &QTableWidget::cellPressed, this, &ULogParametersDialog::alertCellPressed);
+  } else {
+      table_alerts->setVisible(false);
+  }
 }
 
 void ULogParametersDialog::restoreSettings()
@@ -117,4 +166,80 @@ ULogParametersDialog::~ULogParametersDialog()
                     table_params->horizontalHeader()->saveState());
 
   delete ui;
+}
+
+void ULogParametersDialog::paramCellPressed(int row, int colum)
+{
+    QTableWidget* table_logs = ui->tableWidgetLogs;
+    QTableWidgetItem* timeWidget = table_logs->item(row, 0);
+    QString timeStr = timeWidget->text();
+
+    emit setTime(timeStr.toDouble());
+}
+
+
+void ULogParametersDialog::alertCellPressed(int row, int colum)
+{
+    QTableWidget* table_logs = ui->tableWidgetAlerts;
+    QTableWidgetItem* timeWidget = table_logs->item(row, 0);
+    QString timeStr = timeWidget->text();
+
+    emit setTime(timeStr.toDouble());
+}
+
+
+bool ULogParametersDialog::loadAlertDefinitions() {
+    QFile file_obj(QString::fromStdString("alert.json"));
+    if (!file_obj.open(QIODevice::ReadOnly)) {
+       qDebug() << "Failed to open " << "alert.json";
+       return false;
+    }
+
+    QTextStream file_text(&file_obj);
+    QString json_string;
+    json_string = file_text.readAll();
+    file_obj.close();
+    QByteArray json_bytes = json_string.toLocal8Bit();
+
+    QJsonDocument json_doc = QJsonDocument::fromJson(json_bytes);
+
+    if (json_doc.isObject()) {
+        QJsonObject obj = json_doc.object();
+        QJsonArray alerts =  obj["alerts"].toArray();
+        for (QJsonValue alert : alerts) {
+            int message_id = alert["code"].toInt();
+            QString mess = alert["message"].toString();
+
+            alertsDefs[message_id] = ULogParser::AlertDefinition{alert["message"].toString(), alert["description"].toString()};
+        }
+    }
+    return true;
+}
+
+QString ULogParametersDialog::getAlertLevel(int level) {
+    switch (level) {
+        case 0: return QString("NONE");
+        case 1: return QString("INFO");
+        case 2: return QString("PREFLIGHT");
+        case 3: return QString("WARNING");
+        case 4: return QString("ERROR");
+        case 5: return QString("CRITICAL");
+        case 6: return QString("EMERGENCY");
+    default :
+        return QString("**Unknown %1 **").arg(level);
+    }
+}
+
+int ULogParametersDialog::replaceParamPlaceholder(QString& pattern) {
+    int start_index = 0;
+    int end_index = 0;
+    int counter = 0;
+    for (start_index = pattern.indexOf("{"); start_index > 0; start_index = pattern.indexOf("{")) {
+        end_index = pattern.indexOf("}", start_index);
+        if (end_index > 0) {
+            pattern = pattern.replace(start_index, end_index - start_index + 1, QString("%%1").arg(counter + 1) );
+            counter++;
+        }
+    }
+    return counter;
 }

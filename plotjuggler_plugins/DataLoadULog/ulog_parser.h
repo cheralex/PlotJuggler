@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "string_view.hpp"
+#include <QString>
 
 typedef nonstd::string_view StringView;
 
@@ -109,6 +110,23 @@ public:
     std::vector<std::pair<std::string, std::vector<double>>> data;
   };
 
+  struct Alert
+  {
+    uint64_t ts;
+    int code;
+    int level;
+    int param_count;
+    double param1;
+    double param2;
+    double param3;
+  };
+
+  struct AlertDefinition
+  {
+      QString message;
+      QString description;
+  };
+
 public:
   ULogParser(DataStream& datastream);
 
@@ -119,6 +137,8 @@ public:
   const std::map<std::string, std::string>& getInfo() const;
 
   const std::vector<MessageLog>& getLogs() const;
+
+  const std::vector<Alert>& getAlerts() const;
 
 private:
   bool readFileHeader(DataStream& datastream);
@@ -166,8 +186,13 @@ private:
 
   std::vector<MessageLog> _message_logs;
 
+  std::vector<Alert> _alerts;
+
   void parseDataMessage(const Subscription& sub, char* message);
 
   char* parseSimpleDataMessage(Timeseries& timeseries, const Format* format,
                                char* message, size_t* index);
+
+  void parseAlerts();
+
 };

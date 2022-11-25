@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <QDebug>
 
+#include <QJsonObject>
+
 using ios = std::ios;
 
 ULogParser::ULogParser(DataStream& datastream) : _file_start_time(0)
@@ -56,8 +58,7 @@ ULogParser::ULogParser(DataStream& datastream) : _file_start_time(0)
         if (sub.multi_id > 0)
         {
           _message_name_with_multi_id.insert(sub.message_name);
-        }
-
+        }        
         //            printf("ADD_LOGGED_MSG: %d %d %s\n", sub.msg_id, sub.multi_id,
         //            sub.message_name.c_str() ); std::cout << std::endl;
       }
@@ -110,6 +111,8 @@ ULogParser::ULogParser(DataStream& datastream) : _file_start_time(0)
         break;
     }
   }
+
+  parseAlerts();
 }
 
 void ULogParser::parseDataMessage(const ULogParser::Subscription& sub, char* message)
@@ -262,6 +265,11 @@ const std::map<std::string, std::string>& ULogParser::getInfo() const
 const std::vector<ULogParser::MessageLog>& ULogParser::getLogs() const
 {
   return _message_logs;
+}
+
+const std::vector<ULogParser::Alert>& ULogParser::getAlerts() const
+{
+    return _alerts;
 }
 
 bool ULogParser::readSubscription(DataStream& datastream, uint16_t msg_size)
@@ -804,4 +812,51 @@ ULogParser::Timeseries ULogParser::createTimeseries(const ULogParser::Format* fo
 
   appendVector(*format, {});
   return timeseries;
+}
+
+void ULogParser::parseAlerts()
+{
+    if (auto alerts_ts = getTimeseriesMap().find("alert"); alerts_ts != getTimeseriesMap().end()) {
+      const ULogParser::Timeseries& ts_list = alerts_ts->second;
+
+      int code_index = -1;
+      int level_index = -1;
+      int param_count = -1;
+      int param0_index = -1;
+      int param1_index = -1;
+      int param2_index = -1;
+
+      for (int field_index = 0; field_index < ts_list.data.size(); field_index++)
+      {
+          if (ts_list.data[field_index].first.compare("/code") == 0)
+              code_index = field_index;
+          if (ts_list.data[field_index].first.compare("/level") == 0)
+              level_index = field_index;
+          if (ts_list.data[field_index].first.compare("/params_count") == 0)
+              param_count = field_index;
+          if (ts_list.data[field_index].first.compare("/params.00") == 0)
+              param0_index = field_index;
+          if (ts_list.data[field_index].first.compare("/params.01") == 0)
+              param1_index = field_index;
+          if (ts_list.data[field_index].first.compare("/params.02") == 0)
+              param2_index = field_index;
+      }
+
+      if (code_index >= 0 && level_index >= 0)
+      {
+          for (int i = 0; i < ts_list.timestamps.size(); i++) {
+              QString time = QString::number(0.001 * double(ts_list.timestamps[i] / 1000), 'f', 2);
+
+              int code = ts_list.data[code_index].second[i];
+
+              int level = ts_list.data[level_index].second[i];
+              _alerts.push_back(Alert{ts_list.timestamps[i], code, level,
+                                      (int)ts_list.data[param_count].second[i],
+                                      ts_list.data[param0_index].second[i],
+                                      ts_list.data[param1_index].second[i],
+                                      ts_list.data[param2_index].second[i]
+                                });
+          }
+      }
+    }
 }

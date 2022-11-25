@@ -6,27 +6,27 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>617</width>
-    <height>480</height>
+    <width>837</width>
+    <height>525</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="focusPolicy">
       <enum>Qt::NoFocus</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="Info">
       <attribute name="title">
        <string>Info</string>
       </attribute>
-      <layout class="QHBoxLayout" name="horizontalLayout">
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QTableWidget" name="tableWidgetInfo">
          <property name="editTriggers">
@@ -38,11 +38,11 @@
          <property name="columnCount">
           <number>2</number>
          </property>
-         <attribute name="horizontalHeaderDefaultSectionSize">
-          <number>201</number>
-         </attribute>
          <attribute name="horizontalHeaderMinimumSectionSize">
           <number>200</number>
+         </attribute>
+         <attribute name="horizontalHeaderDefaultSectionSize">
+          <number>201</number>
          </attribute>
          <attribute name="horizontalHeaderStretchLastSection">
           <bool>true</bool>
@@ -107,6 +107,9 @@
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
         <widget class="QTableWidget" name="tableWidgetLogs">
+         <property name="selectionMode">
+          <enum>QAbstractItemView::SingleSelection</enum>
+         </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
          </property>
@@ -115,6 +118,44 @@
          </property>
          <property name="columnCount">
           <number>3</number>
+         </property>
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <column>
+          <property name="text">
+           <string>Timestamp</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Level</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Message</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="AlertTab">
+      <attribute name="title">
+       <string>Alerts</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <item>
+        <widget class="QTableWidget" name="tableWidgetAlerts">
+         <property name="selectionMode">
+          <enum>QAbstractItemView::SingleSelection</enum>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
          </property>
          <attribute name="horizontalHeaderStretchLastSection">
           <bool>true</bool>

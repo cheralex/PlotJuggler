@@ -23,6 +23,7 @@ struct Statistics
   double min = 0;
   double max = 0;
   double mean_tot = 0;
+  double var_tot = 0;
 };
 
 class StatisticsDialog : public QDialog
