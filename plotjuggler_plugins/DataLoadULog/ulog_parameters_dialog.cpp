@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QSignalBlocker>
 
 #include <fmt/core.h>
 
@@ -106,8 +107,8 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
 
     row++;
   }
-  connect(table_logs, &QTableWidget::cellPressed, this, &ULogParametersDialog::paramCellPressed);
-  connect(this, &ULogParametersDialog::logRowSelected, table_logs, &QTableWidget::selectRow);
+  connect(table_logs, &QTableWidget::cellPressed, this, &ULogParametersDialog::logsCellPressed, Qt::DirectConnection);
+  connect(this, &ULogParametersDialog::logRowSelected, table_logs, &QTableWidget::selectRow, Qt::DirectConnection);
 
   loadAlertDefinitions();
 
@@ -136,8 +137,8 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
 
          row++;
       }
-      connect(table_alerts, &QTableWidget::cellPressed, this, &ULogParametersDialog::alertCellPressed);
-      connect(this, &ULogParametersDialog::alertRowSelected, table_alerts, &QTableWidget::selectRow);
+      connect(table_alerts, &QTableWidget::cellPressed, this, &ULogParametersDialog::alertCellPressed, Qt::DirectConnection);
+      connect(this, &ULogParametersDialog::alertRowSelected, table_alerts, &QTableWidget::selectRow, Qt::DirectConnection);
   } else {
       table_alerts->setVisible(false);
   }
@@ -177,22 +178,28 @@ ULogParametersDialog::~ULogParametersDialog()
   delete ui;
 }
 
-void ULogParametersDialog::paramCellPressed(int row, int colum)
+void ULogParametersDialog::logsCellPressed(int row, int colum)
 {
-    QTableWidget* table_logs = ui->tableWidgetLogs;
-    QTableWidgetItem* timeWidget = table_logs->item(row, 0);
+    QTableWidget* info_table_logs = ui->tableWidgetLogs;
+    QTableWidget* alert_table_logs = ui->tableWidgetAlerts;
+
+    QTableWidgetItem* timeWidget = info_table_logs->item(row, 0);
     QString timeStr = timeWidget->text();
 
+    activeWidget = info_table_logs;
     emit setTime(timeStr.toDouble());
 }
 
 
 void ULogParametersDialog::alertCellPressed(int row, int colum)
 {
-    QTableWidget* table_logs = ui->tableWidgetAlerts;
-    QTableWidgetItem* timeWidget = table_logs->item(row, 0);
+    QTableWidget* alert_table_logs = ui->tableWidgetAlerts;
+    QTableWidget* info_table_logs = ui->tableWidgetLogs;
+
+    QTableWidgetItem* timeWidget = alert_table_logs->item(row, 0);
     QString timeStr = timeWidget->text();
 
+    activeWidget = alert_table_logs;
     emit setTime(timeStr.toDouble());
 }
 
@@ -254,6 +261,9 @@ int ULogParametersDialog::replaceParamPlaceholder(QString& pattern) {
 }
 
 void ULogParametersDialog::timeSliderChanged(double value) {
+    QTableWidget* table_logs = ui->tableWidgetLogs;
+    QTableWidget* table_alerts = ui->tableWidgetAlerts;
+
     std::pair<double, int> tmp(-1, 0);
     for (auto const &pair : info_rows_by_ts) {
         if (pair.first > value)
@@ -261,8 +271,9 @@ void ULogParametersDialog::timeSliderChanged(double value) {
         tmp = pair;
     }
 
-    if (tmp.first > 0)
+    if (tmp.first > 0 && activeWidget != table_logs) {
         emit logRowSelected(tmp.second);
+    }
 
     tmp.first = -1;
     for (auto const &pair : alerts_rows_by_ts) {
@@ -271,6 +282,9 @@ void ULogParametersDialog::timeSliderChanged(double value) {
         tmp = pair;
     }
 
-    if (tmp.first > 0)
+    if (tmp.first > 0 && activeWidget != table_alerts) {
         emit alertRowSelected(tmp.second);
+    }
+
+    activeWidget = nullptr;
 }
