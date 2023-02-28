@@ -37,6 +37,7 @@
 #include <QHeaderView>
 #include <QStandardPaths>
 #include <QXmlStreamReader>
+#include <QTimeZone>
 
 #include "mainwindow.h"
 #include "curvelist_panel.h"
@@ -2475,7 +2476,7 @@ void MainWindow::updatedDisplayTime()
     else
     {
       QDateTime datetime =
-          QDateTime::fromMSecsSinceEpoch(std::round(_tracker_time * 1000.0));
+          QDateTime::fromMSecsSinceEpoch(std::round(_tracker_time * 1000.0), QTimeZone::utc());
       timeLine->setText(datetime.toString("[yyyy MMM dd] HH:mm::ss.zzz"));
     }
   }

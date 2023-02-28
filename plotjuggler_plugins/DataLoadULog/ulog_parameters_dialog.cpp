@@ -14,11 +14,13 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QSignalBlocker>
+#include <QDateTime>
+#include <QTimeZone>
 
 #include <fmt/core.h>
 
-ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* parent)
-  : QDialog(parent), ui(new Ui::ULogParametersDialog)
+ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* parent, double offset_sec)
+  : QDialog(parent), ui(new Ui::ULogParametersDialog), gps_time_offset_sec(offset_sec)
 {
   ui->setupUi(this);
   QTableWidget* table_info = ui->tableWidgetInfo;
@@ -66,10 +68,19 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
   table_logs->setRowCount(parser.getLogs().size());
   row = 0;
 
+  QString format;
+  if (gps_time_offset_sec > 0)
+      format = "hh:mm:ss.z";
+  else
+      format = "hh:mm:ss.z";
+
+
   for (const auto& log_msg : parser.getLogs())
   {
-    QString time = QString::number(0.001 * double(log_msg.timestamp / 1000), 'f', 2);
-    table_logs->setItem(row, 0, new QTableWidgetItem(time));
+//    QString time = QString::number(0.001 * double(log_msg.timestamp / 1000), 'f', 2);
+    auto dt = QDateTime::fromMSecsSinceEpoch(log_msg.timestamp / 1000 + gps_time_offset_sec * 1000.0, QTimeZone::utc());
+
+    table_logs->setItem(row, 0, new QTableWidgetItem(dt.toString(format)));
 
     switch (log_msg.level)
     {
@@ -103,7 +114,7 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
     table_logs->setItem(row, 2,
                         new QTableWidgetItem(QString::fromStdString(log_msg.msg)));
 
-    info_rows_by_ts.emplace(0.001 * double(log_msg.timestamp / 1000), row);
+    info_rows_by_ts.emplace(log_msg.timestamp * 1e-6 + gps_time_offset_sec, row);
 
     row++;
   }
@@ -117,9 +128,10 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
 
       row = 0;
       for (const auto& alert : parser.getAlerts()) {
-          QString time = QString::number(0.001 * double(alert.ts / 1000), 'f', 2);
+//          QString time = QString::number(0.001 * double(alert.ts / 1000), 'f', 2);
+          auto dt = QDateTime::fromMSecsSinceEpoch(alert.ts / 1000 + gps_time_offset_sec * 1000.0, QTimeZone::utc());
 
-          table_alerts->setItem(row, 0, new QTableWidgetItem(time));
+          table_alerts->setItem(row, 0, new QTableWidgetItem(dt.toString(format)));
 
           if (auto def = alertsDefs.find(alert.code); def != alertsDefs.end()) {
               QString message = def->second.message;
@@ -133,7 +145,7 @@ ULogParametersDialog::ULogParametersDialog(const ULogParser& parser, QWidget* pa
 
          table_alerts->setItem(row, 1, new QTableWidgetItem(getAlertLevel(alert.level)));
 
-         alerts_rows_by_ts.emplace(0.001 * double(alert.ts / 1000), row);
+         alerts_rows_by_ts.emplace(alert.ts * 1e-6 + gps_time_offset_sec, row);
 
          row++;
       }
@@ -187,7 +199,11 @@ void ULogParametersDialog::logsCellPressed(int row, int colum)
     QString timeStr = timeWidget->text();
 
     activeWidget = info_table_logs;
-    emit setTime(timeStr.toDouble());
+    for (auto it = info_rows_by_ts.begin(); it != info_rows_by_ts.end(); ++it) {
+        if (it->second == row) {
+            emit setTime(it->first);
+        }
+    }
 }
 
 
@@ -200,7 +216,11 @@ void ULogParametersDialog::alertCellPressed(int row, int colum)
     QString timeStr = timeWidget->text();
 
     activeWidget = alert_table_logs;
-    emit setTime(timeStr.toDouble());
+    for (auto it = alerts_rows_by_ts.begin(); it != alerts_rows_by_ts.end(); ++it) {
+        if (it->second == row) {
+            emit setTime(it->first);
+        }
+    }
 }
 
 

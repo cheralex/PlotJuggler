@@ -19,7 +19,7 @@ class ULogParametersDialog : public QDialog
   Q_OBJECT
 
 public:
-  explicit ULogParametersDialog(const ULogParser& parser, QWidget* parent = nullptr);
+  explicit ULogParametersDialog(const ULogParser& parser, QWidget* parent = nullptr, double gps_time_offset_sec = 0.0);
 
   void restoreSettings();
 
@@ -32,6 +32,7 @@ private:
   std::set<std::pair<double, int>> info_rows_by_ts;
   std::set<std::pair<double, int>> alerts_rows_by_ts;
   QTableWidget* activeWidget;
+  double gps_time_offset_sec;
 
   void logsCellPressed(int row, int colum);
   void alertCellPressed(int row, int colum);

@@ -58,12 +58,12 @@ class TimeScaleDraw : public QwtScaleDraw
 {
   virtual QwtText label(double v) const
   {
-    QDateTime dt = QDateTime::fromMSecsSinceEpoch((qint64)(v * 1000));
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch((qint64)(v * 1000), QTimeZone::utc());
     if (dt.date().year() == 1970 && dt.date().month() == 1 && dt.date().day() == 1)
     {
       return dt.toString("hh:mm:ss.z");
     }
-    return dt.toString("hh:mm:ss.z\nyyyy MMM dd");
+    return dt.toString("hh:mm:ss.z");
   }
 };
 

@@ -45,7 +45,22 @@ bool DataLoadULog::readDataFromFile(FileLoadInfo* fileload_info,
 
   ULogParser parser(datastream);
 
+
+  double gps_time_offset_sec = 0.0;
   const auto& timeseries_map = parser.getTimeseriesMap();
+
+  if (auto gps_timeseries_iter = timeseries_map.find("vehicle_gps_position"); gps_timeseries_iter != timeseries_map.end()) {
+      auto gps_ts = gps_timeseries_iter->second;
+      auto gps_msg_timestamp = gps_ts.timestamps[0] * 1e-6;
+      for (auto iter = gps_ts.data.begin(); iter != gps_ts.data.end(); ++iter) {
+          if (iter->first.compare("/time_utc_usec") == 0) {
+              auto gps_sec = iter->second[0] * 1e-6;
+              gps_time_offset_sec = gps_sec - gps_msg_timestamp;
+              break;
+          }
+      }
+  }
+
 
   for (const auto& it : timeseries_map)
   {
@@ -60,14 +75,14 @@ bool DataLoadULog::readDataFromFile(FileLoadInfo* fileload_info,
 
       for (size_t i = 0; i < data.second.size(); i++)
       {
-        double msg_time = static_cast<double>(timeseries.timestamps[i]) * 0.000001;
+        double msg_time = static_cast<double>(timeseries.timestamps[i]) * 0.000001 + gps_time_offset_sec;
         PlotData::Point point(msg_time, data.second[i]);
         series->second.pushBack(point);
       }
     }
   }
 
-  ULogParametersDialog* dialog = new ULogParametersDialog(parser, _main_win);
+  ULogParametersDialog* dialog = new ULogParametersDialog(parser, _main_win, gps_time_offset_sec);
   dialog->setWindowTitle(QString("ULog file %1").arg(filename));
   dialog->setAttribute(Qt::WA_DeleteOnClose);
   dialog->restoreSettings();
